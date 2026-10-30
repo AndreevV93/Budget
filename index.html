@@ -504,6 +504,17 @@
       flex: 1;
       font-weight: 500;
     }
+    .cat-item.sub {
+      margin-left: 20px;
+      background: #F1F5F9;
+    }
+    .cat-item.sub .cat-name {
+      font-weight: 400;
+      font-size: 0.9rem;
+    }
+    .cat-parent-block {
+      margin-bottom: 4px;
+    }
 
     .cat-actions {
       display: flex;
@@ -542,15 +553,16 @@
       flex-direction: column;
       align-items: center;
       gap: 4px;
-      padding: 6px 12px;
+      padding: 6px 6px;
       background: none;
       border: none;
       color: #94A3B8;
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       font-weight: 500;
       cursor: pointer;
       font-family: inherit;
-      min-width: 64px;
+      min-width: 56px;
+      flex: 1;
     }
 
     .nav-item.active {
@@ -886,7 +898,7 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Дата</label>
+          <label>📅 Дата операции</label>
           <input type="date" id="incomeDate">
         </div>
         <div class="form-group">
@@ -930,7 +942,7 @@
         <input type="number" id="expenseAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
       </div>
       <div class="form-group">
-        <label>Дата</label>
+        <label>📅 Дата операции</label>
         <input type="date" id="expenseDate">
       </div>
 
@@ -950,6 +962,41 @@
       <div class="card-title">Последние расходы</div>
       <div class="tx-list" id="expenseList"></div>
       <div class="empty-state hidden" id="expenseListEmpty">Пока нет расходов</div>
+    </div>
+  </div>
+
+  <!-- SCREEN: History -->
+  <div class="screen" id="screen-history">
+    <div class="period-tabs" id="historyTypeTabs">
+      <button class="period-tab active" data-hist-type="all">Все</button>
+      <button class="period-tab" data-hist-type="income">Пополнения</button>
+      <button class="period-tab" data-hist-type="expense">Траты</button>
+    </div>
+    <div class="period-tabs" id="historyPeriodTabs">
+      <button class="period-tab active" data-hist-period="month">Месяц</button>
+      <button class="period-tab" data-hist-period="range">Период</button>
+      <button class="period-tab" data-hist-period="all">Всё время</button>
+    </div>
+    <div class="date-range" id="historyDateRange">
+      <input type="date" id="historyDateFrom">
+      <input type="date" id="historyDateTo">
+    </div>
+
+    <div class="summary-grid" style="grid-template-columns:1fr 1fr;margin-bottom:12px">
+      <div class="summary-item income">
+        <div class="label">Пополнения</div>
+        <div class="value" id="histSumIncome">0 Br</div>
+      </div>
+      <div class="summary-item expense">
+        <div class="label">Траты</div>
+        <div class="value" id="histSumExpense">0 Br</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Операции <span id="histCount" class="text-muted" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+      <div class="tx-list" id="historyList"></div>
+      <div class="empty-state hidden" id="historyEmpty">Нет операций за выбранный период</div>
     </div>
   </div>
 
@@ -1024,7 +1071,7 @@
   <nav class="bottom-nav">
     <button class="nav-item active" data-screen="stats">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-      Статистика
+      Стат.
     </button>
     <button class="nav-item" data-screen="income">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
@@ -1034,9 +1081,13 @@
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
       Расходы
     </button>
+    <button class="nav-item" data-screen="history">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+      История
+    </button>
     <button class="nav-item" data-screen="settings">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      Настройки
+      Ещё
     </button>
   </nav>
 
@@ -1061,28 +1112,49 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- Startup setup -->
+  <div class="modal-overlay" id="setupOverlay" style="align-items:center;background:rgba(15,23,42,0.65)">
+    <div class="modal" style="border-radius:20px;max-width:400px;margin:16px;width:calc(100% - 32px)">
+      <div style="text-align:center;margin-bottom:8px;font-size:2rem">💰</div>
+      <h3 style="text-align:center;margin-bottom:6px;font-size:1.2rem">Добро пожаловать</h3>
+      <p class="text-sm text-muted" style="text-align:center;margin-bottom:18px">
+        Укажите текущие остатки — это стартовая точка учёта.
+      </p>
+      <div class="form-group">
+        <label>💳 На карте (Br)</label>
+        <input type="number" id="setupCard" placeholder="0" inputmode="decimal" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>💵 Наличные (Br)</label>
+        <input type="number" id="setupCash" placeholder="0" inputmode="decimal" min="0" step="0.01">
+      </div>
+      <button class="btn btn-primary" id="btnSetupStart" style="margin-top:4px">Начать учёт</button>
+      <button class="btn btn-ghost" id="btnSetupSkip" style="width:100%;margin-top:10px">Пропустить (остатки 0)</button>
+    </div>
+  </div>
+
   <script>
     // ========== DATA & STATE ==========
     const STORAGE_KEY = 'budget_app_v1';
     const SYNC_KEY = 'budget_sync_config';
 
     const DEFAULT_CATEGORIES = [
-      { id: 'c1', name: 'Питание', color: '#22C55E' },
-      { id: 'c2', name: 'Объедалово', color: '#EF4444' },
-      { id: 'c3', name: 'Настя', color: '#EC4899' },
-      { id: 'c4', name: 'Теннис', color: '#3B82F6' },
-      { id: 'c5', name: 'Автомобиль', color: '#6366F1' },
-      { id: 'c6', name: 'Перекус', color: '#F59E0B' },
-      { id: 'c7', name: 'Мама', color: '#8B5CF6' },
-      { id: 'c8', name: 'Дом', color: '#14B8A6' },
-      { id: 'c9', name: 'Пончики', color: '#F97316' },
-      { id: 'c10', name: 'Квизы', color: '#06B6D4' }
+      { id: 'c1', name: 'Питание', color: '#22C55E', parentId: null },
+      { id: 'c2', name: 'Объедалово', color: '#EF4444', parentId: null },
+      { id: 'c3', name: 'Настя', color: '#EC4899', parentId: null },
+      { id: 'c4', name: 'Теннис', color: '#3B82F6', parentId: null },
+      { id: 'c5', name: 'Автомобиль', color: '#6366F1', parentId: null },
+      { id: 'c6', name: 'Перекус', color: '#F59E0B', parentId: null },
+      { id: 'c7', name: 'Мама', color: '#8B5CF6', parentId: null },
+      { id: 'c8', name: 'Дом', color: '#14B8A6', parentId: null },
+      { id: 'c9', name: 'Пончики', color: '#F97316', parentId: null },
+      { id: 'c10', name: 'Квизы', color: '#06B6D4', parentId: null }
     ];
 
     const DEFAULT_SOURCES = [
-      { id: 's1', name: 'Работа' },
-      { id: 's2', name: 'Настя' },
-      { id: 's3', name: 'Мама' }
+      { id: 's1', name: 'Работа', color: '#16A34A' },
+      { id: 's2', name: 'Настя', color: '#EC4899' },
+      { id: 's3', name: 'Мама', color: '#8B5CF6' }
     ];
 
     const PRESET_COLORS = [
@@ -1097,16 +1169,22 @@
       sources: [],
       transactions: [],
       initialBalances: { card: 0, cash: 0 },
+      setupComplete: false,
       period: 'month',
       dateFrom: null,
-      dateTo: null
+      dateTo: null,
+      histType: 'all',
+      histPeriod: 'month',
+      histDateFrom: null,
+      histDateTo: null
     };
 
     let syncConfig = { binId: '', masterKey: '', lastSync: null };
     let expenseChart = null;
     let incomeChart = null;
-    let modalMode = null; // 'category' | 'source' | 'edit-category' | 'edit-source'
+    let modalMode = null; // 'category' | 'subcategory' | 'source' | 'edit-category' | 'edit-source'
     let editingId = null;
+    let parentForSub = null;
     let selectedColor = PRESET_COLORS[0];
     let syncTimer = null;
     let saveTimeout = null;
@@ -1118,6 +1196,53 @@
 
     function formatMoney(n) {
       return new Intl.NumberFormat('be-BY', { maximumFractionDigits: 2 }).format(n || 0) + ' Br';
+    }
+
+    function getCategory(id) {
+      return state.categories.find(c => c.id === id);
+    }
+
+    function getRootCategoryId(catId) {
+      const cat = getCategory(catId);
+      if (!cat) return catId;
+      if (cat.parentId) return cat.parentId;
+      return cat.id;
+    }
+
+    function getCategoryLabel(catId) {
+      const cat = getCategory(catId);
+      if (!cat) return '—';
+      if (cat.parentId) {
+        const parent = getCategory(cat.parentId);
+        return parent ? `${parent.name} → ${cat.name}` : cat.name;
+      }
+      return cat.name;
+    }
+
+    function getTopCategories() {
+      return state.categories.filter(c => !c.parentId);
+    }
+
+    function getSubcategories(parentId) {
+      return state.categories.filter(c => c.parentId === parentId);
+    }
+
+    function buildCategoryOptions(selectedId = '') {
+      let html = '';
+      getTopCategories().forEach(parent => {
+        const subs = getSubcategories(parent.id);
+        if (subs.length === 0) {
+          html += `<option value="${parent.id}" ${parent.id === selectedId ? 'selected' : ''}>${parent.name}</option>`;
+        } else {
+          html += `<optgroup label="${parent.name}">`;
+          html += `<option value="${parent.id}" ${parent.id === selectedId ? 'selected' : ''}>${parent.name} (общее)</option>`;
+          subs.forEach(sub => {
+            html += `<option value="${sub.id}" ${sub.id === selectedId ? 'selected' : ''}>↳ ${sub.name}</option>`;
+          });
+          html += `</optgroup>`;
+        }
+      });
+      return html;
     }
 
     function today() {
@@ -1146,21 +1271,37 @@
           state.sources = data.sources || [...DEFAULT_SOURCES];
           state.transactions = data.transactions || [];
           state.initialBalances = data.initialBalances || { card: 0, cash: 0 };
+          state.setupComplete = !!data.setupComplete;
+          // If already has data, treat as setup done
+          if (!state.setupComplete && (state.transactions.length > 0 || state.initialBalances.card || state.initialBalances.cash)) {
+            state.setupComplete = true;
+          }
           // Migrate old transactions without account
           state.transactions.forEach(tx => {
             if (!tx.account) tx.account = 'card';
+          });
+          // Migrate categories without parentId
+          state.categories.forEach(c => {
+            if (c.parentId === undefined) c.parentId = null;
+          });
+          // Migrate sources without color
+          const fallbackSrcColors = ['#16A34A', '#EC4899', '#8B5CF6', '#0D9488', '#F59E0B', '#3B82F6'];
+          state.sources.forEach((s, i) => {
+            if (!s.color) s.color = fallbackSrcColors[i % fallbackSrcColors.length];
           });
         } else {
           state.categories = [...DEFAULT_CATEGORIES];
           state.sources = [...DEFAULT_SOURCES];
           state.transactions = [];
           state.initialBalances = { card: 0, cash: 0 };
+          state.setupComplete = false;
         }
       } catch (e) {
         state.categories = [...DEFAULT_CATEGORIES];
         state.sources = [...DEFAULT_SOURCES];
         state.transactions = [];
         state.initialBalances = { card: 0, cash: 0 };
+        state.setupComplete = false;
       }
 
       try {
@@ -1174,7 +1315,8 @@
         categories: state.categories,
         sources: state.sources,
         transactions: state.transactions,
-        initialBalances: state.initialBalances
+        initialBalances: state.initialBalances,
+        setupComplete: state.setupComplete
       }));
       if (!skipSync) scheduleSync();
     }
@@ -1196,6 +1338,7 @@
         sources: state.sources,
         transactions: state.transactions,
         initialBalances: state.initialBalances,
+        setupComplete: state.setupComplete,
         updatedAt: new Date().toISOString()
       };
 
@@ -1264,6 +1407,7 @@
         if (data.sources) state.sources = data.sources;
         if (data.transactions) state.transactions = data.transactions;
         if (data.initialBalances) state.initialBalances = data.initialBalances;
+        if (data.setupComplete !== undefined) state.setupComplete = !!data.setupComplete;
         state.transactions.forEach(tx => { if (!tx.account) tx.account = 'card'; });
 
         saveState(true);
@@ -1384,11 +1528,12 @@
       document.getElementById('sumBalance').textContent = formatMoney(balance);
       document.getElementById('sumBalance').style.color = balance >= 0 ? 'var(--income)' : 'var(--expense)';
 
-      // Expense by category
+      // Expense by category (aggregate to top-level)
       const expByCat = {};
       expenses.forEach(tx => {
         (tx.splits || []).forEach(sp => {
-          expByCat[sp.categoryId] = (expByCat[sp.categoryId] || 0) + sp.amount;
+          const rootId = getRootCategoryId(sp.categoryId);
+          expByCat[rootId] = (expByCat[rootId] || 0) + sp.amount;
         });
       });
 
@@ -1396,7 +1541,7 @@
       const expData = [];
       const expColors = [];
       Object.entries(expByCat).forEach(([catId, sum]) => {
-        const cat = state.categories.find(c => c.id === catId);
+        const cat = getCategory(catId);
         if (cat && sum > 0) {
           expLabels.push(cat.name);
           expData.push(sum);
@@ -1427,15 +1572,12 @@
       const incLabels = [];
       const incData = [];
       const incColors = [];
-      const srcColors = ['#16A34A', '#0D9488', '#0891B2', '#6366F1', '#8B5CF6', '#EC4899', '#F59E0B'];
-      let ci = 0;
       Object.entries(incBySrc).forEach(([srcId, sum]) => {
         const src = state.sources.find(s => s.id === srcId);
         if (src && sum > 0) {
           incLabels.push(src.name);
           incData.push(sum);
-          incColors.push(srcColors[ci % srcColors.length]);
-          ci++;
+          incColors.push(src.color || '#16A34A');
         }
       });
 
@@ -1551,10 +1693,7 @@
       }
       empty.classList.add('hidden');
       list.innerHTML = items.map(tx => {
-        const splitsText = (tx.splits || []).map(sp => {
-          const cat = state.categories.find(c => c.id === sp.categoryId);
-          return cat ? cat.name : '?';
-        }).join(', ');
+        const splitsText = (tx.splits || []).map(sp => getCategoryLabel(sp.categoryId)).join(', ');
         const accIcon = (tx.account || 'card') === 'cash' ? '💵' : '💳';
         return `<div class="tx-item">
           <div class="tx-icon expense">↓</div>
@@ -1573,29 +1712,118 @@
       return `${day}.${m}.${y}`;
     }
 
+    // ========== HISTORY ==========
+    function getHistoryDateRange() {
+      if (state.histPeriod === 'all') return { from: null, to: null };
+      if (state.histPeriod === 'month') {
+        return { from: monthAgo(), to: today() };
+      }
+      return {
+        from: state.histDateFrom || monthAgo(),
+        to: state.histDateTo || today()
+      };
+    }
+
+    function filterHistoryTx() {
+      const { from, to } = getHistoryDateRange();
+      return state.transactions.filter(tx => {
+        if (state.histType === 'income' && tx.type !== 'income') return false;
+        if (state.histType === 'expense' && tx.type !== 'expense') return false;
+        if (from && tx.date < from) return false;
+        if (to && tx.date > to) return false;
+        return true;
+      }).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+    }
+
+    function renderHistory() {
+      const items = filterHistoryTx();
+      const list = document.getElementById('historyList');
+      const empty = document.getElementById('historyEmpty');
+
+      const sumInc = items.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      const sumExp = items.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      document.getElementById('histSumIncome').textContent = formatMoney(sumInc);
+      document.getElementById('histSumExpense').textContent = formatMoney(sumExp);
+      document.getElementById('histCount').textContent = items.length ? `(${items.length})` : '';
+
+      if (items.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        return;
+      }
+      empty.classList.add('hidden');
+      list.innerHTML = items.map(tx => {
+        const accIcon = (tx.account || 'card') === 'cash' ? '💵' : '💳';
+        if (tx.type === 'income') {
+          const src = state.sources.find(s => s.id === tx.sourceId);
+          const title = (src ? src.name : '—') + (tx.note ? ' · ' + tx.note : '');
+          return `<div class="tx-item">
+            <div class="tx-icon income">↑</div>
+            <div class="tx-info">
+              <div class="tx-title">${title}</div>
+              <div class="tx-meta">${formatDate(tx.date)} · ${accIcon}${tx.note ? ' · 📝' : ''}</div>
+            </div>
+            <div class="tx-amount income">+${formatMoney(tx.amount)}</div>
+            <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
+          </div>`;
+        } else {
+          const splitsText = (tx.splits || []).map(sp =>
+            `${getCategoryLabel(sp.categoryId)} ${formatMoney(sp.amount)}`
+          ).join(', ');
+          const title = splitsText + (tx.note ? ' · ' + tx.note : '');
+          return `<div class="tx-item">
+            <div class="tx-icon expense">↓</div>
+            <div class="tx-info">
+              <div class="tx-title">${title}</div>
+              <div class="tx-meta">${formatDate(tx.date)} · ${accIcon}${tx.note ? ' · 📝' : ''}</div>
+            </div>
+            <div class="tx-amount expense">−${formatMoney(tx.amount)}</div>
+            <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
+          </div>`;
+        }
+      }).join('');
+    }
+
     // ========== CATEGORIES & SOURCES UI ==========
     function renderCategories() {
       const list = document.getElementById('catList');
-      list.innerHTML = state.categories.map(c => `
-        <div class="cat-item">
-          <div class="cat-color" style="background:${c.color}"></div>
-          <div class="cat-name">${c.name}</div>
-          <div class="cat-actions">
-            <button class="icon-btn edit-cat" data-id="${c.id}">✎</button>
-            <button class="icon-btn del-cat" data-id="${c.id}">🗑</button>
-          </div>
-        </div>
-      `).join('');
+      let html = '';
+      getTopCategories().forEach(parent => {
+        html += `
+          <div class="cat-parent-block">
+            <div class="cat-item">
+              <div class="cat-color" style="background:${parent.color}"></div>
+              <div class="cat-name">${parent.name}</div>
+              <div class="cat-actions">
+                <button class="icon-btn add-sub" data-id="${parent.id}" title="Подкатегория">+</button>
+                <button class="icon-btn edit-cat" data-id="${parent.id}">✎</button>
+                <button class="icon-btn del-cat" data-id="${parent.id}">🗑</button>
+              </div>
+            </div>`;
+        getSubcategories(parent.id).forEach(sub => {
+          html += `
+            <div class="cat-item sub">
+              <div class="cat-color" style="background:${sub.color}"></div>
+              <div class="cat-name">↳ ${sub.name}</div>
+              <div class="cat-actions">
+                <button class="icon-btn edit-cat" data-id="${sub.id}">✎</button>
+                <button class="icon-btn del-cat" data-id="${sub.id}">🗑</button>
+              </div>
+            </div>`;
+        });
+        html += `</div>`;
+      });
+      list.innerHTML = html || '<div class="text-muted text-sm">Нет категорий</div>';
     }
 
     function renderSources() {
       const list = document.getElementById('sourceList');
       list.innerHTML = state.sources.map(s => `
         <div class="cat-item">
-          <div class="cat-color" style="background:#0D9488"></div>
+          <div class="cat-color" style="background:${s.color || '#0D9488'}"></div>
           <div class="cat-name">${s.name}</div>
           <div class="cat-actions">
-            <button class="icon-btn edit-src" data-id="${s.id}">✎</button>
+            <button class="icon-btn edit-src" data-id="${s.id}" title="Изменить название и цвет">✎</button>
             <button class="icon-btn del-src" data-id="${s.id}">🗑</button>
           </div>
         </div>
@@ -1616,9 +1844,7 @@
       row.className = 'split-row';
       row.innerHTML = `
         <select class="split-cat">
-          ${state.categories.map(c =>
-            `<option value="${c.id}" ${c.id === categoryId ? 'selected' : ''}>${c.name}</option>`
-          ).join('')}
+          ${buildCategoryOptions(categoryId)}
         </select>
         <input type="number" class="split-amount" placeholder="0" inputmode="decimal" min="0" step="0.01" value="${amount}">
         <button type="button" class="remove-btn">×</button>
@@ -1668,27 +1894,36 @@
       const nameInput = document.getElementById('modalName');
       const colorGroup = document.getElementById('modalColorGroup');
 
-      if (mode === 'category' || mode === 'edit-category') {
-        title.textContent = mode === 'category' ? 'Новая категория' : 'Редактировать категорию';
+      if (mode === 'category' || mode === 'edit-category' || mode === 'subcategory') {
+        if (mode === 'subcategory') {
+          const parent = getCategory(parentForSub);
+          title.textContent = parent ? `Подкатегория: ${parent.name}` : 'Новая подкатегория';
+          selectedColor = parent ? parent.color : PRESET_COLORS[0];
+          nameInput.value = '';
+        } else if (mode === 'category') {
+          title.textContent = 'Новая категория';
+          nameInput.value = '';
+          selectedColor = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
+        } else {
+          const cat = getCategory(id);
+          title.textContent = cat && cat.parentId ? 'Редактировать подкатегорию' : 'Редактировать категорию';
+          nameInput.value = cat ? cat.name : '';
+          selectedColor = cat ? cat.color : PRESET_COLORS[0];
+        }
+        colorGroup.style.display = 'block';
+        renderColorGrid();
+      } else if (mode === 'source' || mode === 'edit-source') {
+        title.textContent = mode === 'source' ? 'Новый источник' : 'Редактировать источник';
         colorGroup.style.display = 'block';
         if (id) {
-          const cat = state.categories.find(c => c.id === id);
-          nameInput.value = cat.name;
-          selectedColor = cat.color;
+          const src = state.sources.find(s => s.id === id);
+          nameInput.value = src ? src.name : '';
+          selectedColor = src && src.color ? src.color : PRESET_COLORS[0];
         } else {
           nameInput.value = '';
           selectedColor = PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
         }
         renderColorGrid();
-      } else {
-        title.textContent = mode === 'source' ? 'Новый источник' : 'Редактировать источник';
-        colorGroup.style.display = 'none';
-        if (id) {
-          const src = state.sources.find(s => s.id === id);
-          nameInput.value = src.name;
-        } else {
-          nameInput.value = '';
-        }
       }
       document.getElementById('modal').classList.add('show');
       nameInput.focus();
@@ -1717,6 +1952,7 @@
           if (btn.dataset.screen === 'stats') renderStats();
           if (btn.dataset.screen === 'income') { renderIncomeList(); fillSourceSelect(); }
           if (btn.dataset.screen === 'expense') renderExpenseList();
+          if (btn.dataset.screen === 'history') renderHistory();
           if (btn.dataset.screen === 'settings') {
             renderCategories();
             renderSources();
@@ -1751,6 +1987,40 @@
         renderStats();
       });
 
+      // History type tabs
+      document.querySelectorAll('#historyTypeTabs .period-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('#historyTypeTabs .period-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          state.histType = tab.dataset.histType;
+          renderHistory();
+        });
+      });
+
+      // History period tabs
+      document.querySelectorAll('#historyPeriodTabs .period-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('#historyPeriodTabs .period-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          state.histPeriod = tab.dataset.histPeriod;
+          document.getElementById('historyDateRange').classList.toggle('show', state.histPeriod === 'range');
+          if (state.histPeriod === 'range') {
+            document.getElementById('historyDateFrom').value = state.histDateFrom || monthAgo();
+            document.getElementById('historyDateTo').value = state.histDateTo || today();
+          }
+          renderHistory();
+        });
+      });
+
+      document.getElementById('historyDateFrom').addEventListener('change', e => {
+        state.histDateFrom = e.target.value;
+        renderHistory();
+      });
+      document.getElementById('historyDateTo').addEventListener('change', e => {
+        state.histDateTo = e.target.value;
+        renderHistory();
+      });
+
       // Account toggle pills
       document.querySelectorAll('.account-toggle').forEach(toggle => {
         toggle.addEventListener('click', e => {
@@ -1767,9 +2037,28 @@
       document.getElementById('btnSaveInitial').addEventListener('click', () => {
         state.initialBalances.card = parseFloat(document.getElementById('initialCard').value) || 0;
         state.initialBalances.cash = parseFloat(document.getElementById('initialCash').value) || 0;
+        state.setupComplete = true;
         saveState();
         renderAccountBalances();
         toast('Начальные остатки сохранены');
+      });
+
+      // Startup setup
+      document.getElementById('btnSetupStart').addEventListener('click', () => {
+        state.initialBalances.card = parseFloat(document.getElementById('setupCard').value) || 0;
+        state.initialBalances.cash = parseFloat(document.getElementById('setupCash').value) || 0;
+        state.setupComplete = true;
+        saveState();
+        hideSetup();
+        renderAccountBalances();
+        toast('Стартовые остатки сохранены');
+      });
+      document.getElementById('btnSetupSkip').addEventListener('click', () => {
+        state.initialBalances = { card: 0, cash: 0 };
+        state.setupComplete = true;
+        saveState();
+        hideSetup();
+        renderAccountBalances();
       });
 
       // Income add
@@ -1798,6 +2087,7 @@
         document.getElementById('incomeNote').value = '';
         renderIncomeList();
         renderAccountBalances();
+        renderHistory();
         toast('Доход добавлен');
       });
 
@@ -1841,6 +2131,7 @@
         updateRemaining();
         renderExpenseList();
         renderAccountBalances();
+        renderHistory();
         toast('Расход добавлен');
       });
 
@@ -1853,6 +2144,7 @@
             saveState();
             renderIncomeList();
             renderExpenseList();
+            renderHistory();
             renderStats();
             toast('Удалено');
           }
@@ -1860,8 +2152,14 @@
         if (e.target.classList.contains('edit-cat')) {
           openModal('edit-category', e.target.dataset.id);
         }
+        if (e.target.classList.contains('add-sub')) {
+          parentForSub = e.target.dataset.id;
+          openModal('subcategory');
+        }
         if (e.target.classList.contains('del-cat')) {
           const id = e.target.dataset.id;
+          const hasChildren = state.categories.some(c => c.parentId === id);
+          if (hasChildren) return toast('Сначала удалите подкатегории');
           const used = state.transactions.some(t => t.splits && t.splits.some(s => s.categoryId === id));
           if (used) return toast('Категория используется в расходах');
           if (confirm('Удалить категорию?')) {
@@ -1902,15 +2200,30 @@
         if (!name) return toast('Введите название');
 
         if (modalMode === 'category') {
-          state.categories.push({ id: uid(), name, color: selectedColor });
+          state.categories.push({ id: uid(), name, color: selectedColor, parentId: null });
+        } else if (modalMode === 'subcategory') {
+          const parent = getCategory(parentForSub);
+          state.categories.push({
+            id: uid(),
+            name,
+            color: selectedColor || (parent ? parent.color : PRESET_COLORS[0]),
+            parentId: parentForSub
+          });
         } else if (modalMode === 'edit-category') {
-          const cat = state.categories.find(c => c.id === editingId);
-          if (cat) { cat.name = name; cat.color = selectedColor; }
+          const cat = getCategory(editingId);
+          if (cat) {
+            cat.name = name;
+            cat.color = selectedColor;
+            // if top-level color changed, optionally update children without custom? keep children's own colors
+          }
         } else if (modalMode === 'source') {
-          state.sources.push({ id: uid(), name });
+          state.sources.push({ id: uid(), name, color: selectedColor });
         } else if (modalMode === 'edit-source') {
           const src = state.sources.find(s => s.id === editingId);
-          if (src) src.name = name;
+          if (src) {
+            src.name = name;
+            src.color = selectedColor;
+          }
         }
         saveState();
         closeModal();
@@ -1954,6 +2267,7 @@
           sources: state.sources,
           transactions: state.transactions,
           initialBalances: state.initialBalances,
+          setupComplete: state.setupComplete,
           exportedAt: new Date().toISOString()
         };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1980,6 +2294,7 @@
             if (data.sources) state.sources = data.sources;
             if (data.transactions) state.transactions = data.transactions;
             if (data.initialBalances) state.initialBalances = data.initialBalances;
+            if (data.setupComplete !== undefined) state.setupComplete = !!data.setupComplete;
             state.transactions.forEach(tx => { if (!tx.account) tx.account = 'card'; });
             saveState();
             renderAll();
@@ -1998,8 +2313,10 @@
           state.categories = [...DEFAULT_CATEGORIES];
           state.sources = [...DEFAULT_SOURCES];
           state.initialBalances = { card: 0, cash: 0 };
+          state.setupComplete = false;
           saveState();
           renderAll();
+          showSetupIfNeeded();
           toast('Данные очищены');
         }
       });
@@ -2010,9 +2327,25 @@
       renderAccountBalances();
       renderIncomeList();
       renderExpenseList();
+      renderHistory();
       renderCategories();
       renderSources();
       fillSourceSelect();
+    }
+
+    function showSetupIfNeeded() {
+      const el = document.getElementById('setupOverlay');
+      if (!state.setupComplete) {
+        document.getElementById('setupCard').value = state.initialBalances.card || '';
+        document.getElementById('setupCash').value = state.initialBalances.cash || '';
+        el.classList.add('show');
+      } else {
+        el.classList.remove('show');
+      }
+    }
+
+    function hideSetup() {
+      document.getElementById('setupOverlay').classList.remove('show');
     }
 
     // ========== INIT ==========
@@ -2028,11 +2361,15 @@
       initEvents();
       renderAll();
       updateSyncUI(syncConfig.binId ? 'ok' : 'local');
+      showSetupIfNeeded();
 
       // Load from cloud on start if configured
       if (syncConfig.binId && syncConfig.masterKey) {
         loadFromCloud().then(ok => {
-          if (ok) renderAll();
+          if (ok) {
+            renderAll();
+            showSetupIfNeeded();
+          }
         });
       }
 
