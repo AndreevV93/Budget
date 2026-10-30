@@ -1272,7 +1272,78 @@
           html += `</optgroup>`;
         }
       });
-      return html;
+      return html || '<option value="">Нет категорий</option>';
+    }
+
+    function refreshSplitCategorySelects() {
+      document.querySelectorAll('select.split-cat').forEach(sel => {
+        const current = sel.value;
+        sel.innerHTML = buildCategoryOptions(current);
+        // keep selection if still exists
+        if (current && [...sel.options].some(o => o.value === current)) {
+          sel.value = current;
+        }
+      });
+    }
+
+    function swapInArray(arr, i, j) {
+      if (i < 0 || j < 0 || i >= arr.length || j >= arr.length) return arr;
+      const copy = arr.slice();
+      const tmp = copy[i];
+      copy[i] = copy[j];
+      copy[j] = tmp;
+      return copy;
+    }
+
+    function rebuildCategoriesOrder(topOrder, subOrders) {
+      // topOrder: array of top-level category objects in desired order
+      // subOrders: map parentId -> array of sub objects in order
+      const result = [];
+      topOrder.forEach(top => {
+        result.push(top);
+        const subs = subOrders[top.id] || getSubcategories(top.id);
+        subs.forEach(s => result.push(s));
+      });
+      state.categories = result;
+    }
+
+    function moveCategory(id, direction) {
+      const cat = getCategory(id);
+      if (!cat) return;
+      if (cat.parentId) {
+        const siblings = getSubcategories(cat.parentId);
+        const idx = siblings.findIndex(c => c.id === id);
+        const newIdx = idx + direction;
+        if (newIdx < 0 || newIdx >= siblings.length) return;
+        const newSiblings = swapInArray(siblings, idx, newIdx);
+        const tops = getTopCategories();
+        const subOrders = {};
+        tops.forEach(t => {
+          subOrders[t.id] = t.id === cat.parentId ? newSiblings : getSubcategories(t.id);
+        });
+        rebuildCategoriesOrder(tops, subOrders);
+      } else {
+        const tops = getTopCategories();
+        const idx = tops.findIndex(c => c.id === id);
+        const newIdx = idx + direction;
+        if (newIdx < 0 || newIdx >= tops.length) return;
+        const newTops = swapInArray(tops, idx, newIdx);
+        rebuildCategoriesOrder(newTops, {});
+      }
+      saveState();
+      renderCategories();
+      refreshSplitCategorySelects();
+    }
+
+    function moveSource(id, direction) {
+      const idx = state.sources.findIndex(s => s.id === id);
+      if (idx < 0) return;
+      const newIdx = idx + direction;
+      if (newIdx < 0 || newIdx >= state.sources.length) return;
+      state.sources = swapInArray(state.sources, idx, newIdx);
+      saveState();
+      renderSources();
+      fillSourceSelect();
     }
 
     function today() {
@@ -1851,9 +1922,11 @@
               <div class="cat-color" style="background:${parent.color}"></div>
               <div class="cat-name">${parent.name}</div>
               <div class="cat-actions">
+                <button class="icon-btn move-cat-up" data-id="${parent.id}" title="Выше">↑</button>
+                <button class="icon-btn move-cat-down" data-id="${parent.id}" title="Ниже">↓</button>
                 <button class="icon-btn add-sub" data-id="${parent.id}" title="Подкатегория">+</button>
-                <button class="icon-btn edit-cat" data-id="${parent.id}">✎</button>
-                <button class="icon-btn del-cat" data-id="${parent.id}">🗑</button>
+                <button class="icon-btn edit-cat" data-id="${parent.id}" title="Изменить">✎</button>
+                <button class="icon-btn del-cat" data-id="${parent.id}" title="Удалить">🗑</button>
               </div>
             </div>`;
         getSubcategories(parent.id).forEach(sub => {
@@ -1862,8 +1935,10 @@
               <div class="cat-color" style="background:${sub.color}"></div>
               <div class="cat-name">↳ ${sub.name}</div>
               <div class="cat-actions">
-                <button class="icon-btn edit-cat" data-id="${sub.id}">✎</button>
-                <button class="icon-btn del-cat" data-id="${sub.id}">🗑</button>
+                <button class="icon-btn move-cat-up" data-id="${sub.id}" title="Выше">↑</button>
+                <button class="icon-btn move-cat-down" data-id="${sub.id}" title="Ниже">↓</button>
+                <button class="icon-btn edit-cat" data-id="${sub.id}" title="Изменить">✎</button>
+                <button class="icon-btn del-cat" data-id="${sub.id}" title="Удалить">🗑</button>
               </div>
             </div>`;
         });
@@ -1879,6 +1954,8 @@
           <div class="cat-color" style="background:${s.color || '#0D9488'}"></div>
           <div class="cat-name">${s.name}</div>
           <div class="cat-actions">
+            <button class="icon-btn move-src-up" data-id="${s.id}" title="Выше">↑</button>
+            <button class="icon-btn move-src-down" data-id="${s.id}" title="Ниже">↓</button>
             <button class="icon-btn edit-src" data-id="${s.id}" title="Изменить название и цвет">✎</button>
             <button class="icon-btn del-src" data-id="${s.id}">🗑</button>
           </div>
@@ -2007,7 +2084,11 @@
           document.getElementById('screen-' + btn.dataset.screen).classList.add('active');
           if (btn.dataset.screen === 'stats') renderStats();
           if (btn.dataset.screen === 'income') { renderIncomeList(); fillSourceSelect(); }
-          if (btn.dataset.screen === 'expense') renderExpenseList();
+          if (btn.dataset.screen === 'expense') {
+            renderExpenseList();
+            refreshSplitCategorySelects();
+            if (!document.querySelector('#splitsList .split-row')) addSplitRow();
+          }
           if (btn.dataset.screen === 'history') renderHistory();
           if (btn.dataset.screen === 'settings') {
             renderCategories();
@@ -2243,6 +2324,18 @@
         if (e.target.classList.contains('edit-cat')) {
           openModal('edit-category', e.target.dataset.id);
         }
+        if (e.target.classList.contains('move-cat-up')) {
+          moveCategory(e.target.dataset.id, -1);
+        }
+        if (e.target.classList.contains('move-cat-down')) {
+          moveCategory(e.target.dataset.id, 1);
+        }
+        if (e.target.classList.contains('move-src-up')) {
+          moveSource(e.target.dataset.id, -1);
+        }
+        if (e.target.classList.contains('move-src-down')) {
+          moveSource(e.target.dataset.id, 1);
+        }
         if (e.target.classList.contains('add-sub')) {
           parentForSub = e.target.dataset.id;
           openModal('subcategory');
@@ -2257,6 +2350,7 @@
             state.categories = state.categories.filter(c => c.id !== id);
             saveState();
             renderCategories();
+            refreshSplitCategorySelects();
             toast('Удалено');
           }
         }
@@ -2321,6 +2415,7 @@
         renderCategories();
         renderSources();
         fillSourceSelect();
+        refreshSplitCategorySelects();
         toast('Сохранено');
       });
 
