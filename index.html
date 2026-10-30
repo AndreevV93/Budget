@@ -825,6 +825,35 @@
           <div class="account-value" id="balCash">0 Br</div>
         </div>
       </div>
+
+      <div class="card" style="margin-top:12px;margin-bottom:0">
+        <div class="card-title">Перевод между счетами</div>
+        <div class="account-toggle" id="transferDirectionToggle">
+          <label class="account-option active" data-dir="card_to_cash">
+            <input type="radio" name="transferDir" value="card_to_cash" checked>
+            <span class="opt-icon">💳→💵</span> Карта → наличные
+          </label>
+          <label class="account-option" data-dir="cash_to_card">
+            <input type="radio" name="transferDir" value="cash_to_card">
+            <span class="opt-icon">💵→💳</span> Наличные → карта
+          </label>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Сумма (Br)</label>
+            <input type="number" id="transferAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>📅 Дата</label>
+            <input type="date" id="transferDate">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Заметка (необязательно)</label>
+          <input type="text" id="transferNote" placeholder="Например: снял в банкомате">
+        </div>
+        <button class="btn btn-primary" id="btnTransfer">Перевести</button>
+      </div>
     </div>
 
     <div class="period-tabs">
@@ -971,6 +1000,7 @@
       <button class="period-tab active" data-hist-type="all">Все</button>
       <button class="period-tab" data-hist-type="income">Пополнения</button>
       <button class="period-tab" data-hist-type="expense">Траты</button>
+      <button class="period-tab" data-hist-type="transfer">Переводы</button>
     </div>
     <div class="period-tabs" id="historyPeriodTabs">
       <button class="period-tab active" data-hist-period="month">Месяц</button>
@@ -1486,11 +1516,21 @@
       let card = state.initialBalances.card || 0;
       let cash = state.initialBalances.cash || 0;
       state.transactions.forEach(tx => {
+        if (tx.type === 'transfer') {
+          if (tx.fromAccount === 'card') {
+            card -= tx.amount;
+            cash += tx.amount;
+          } else {
+            cash -= tx.amount;
+            card += tx.amount;
+          }
+          return;
+        }
         const acc = tx.account || 'card';
         if (tx.type === 'income') {
           if (acc === 'card') card += tx.amount;
           else cash += tx.amount;
-        } else {
+        } else if (tx.type === 'expense') {
           if (acc === 'card') card -= tx.amount;
           else cash -= tx.amount;
         }
@@ -1729,6 +1769,7 @@
       return state.transactions.filter(tx => {
         if (state.histType === 'income' && tx.type !== 'income') return false;
         if (state.histType === 'expense' && tx.type !== 'expense') return false;
+        if (state.histType === 'transfer' && tx.type !== 'transfer') return false;
         if (from && tx.date < from) return false;
         if (to && tx.date > to) return false;
         return true;
@@ -1753,6 +1794,21 @@
       }
       empty.classList.add('hidden');
       list.innerHTML = items.map(tx => {
+        if (tx.type === 'transfer') {
+          const fromIcon = tx.fromAccount === 'cash' ? '💵' : '💳';
+          const toIcon = tx.fromAccount === 'cash' ? '💳' : '💵';
+          const dirLabel = tx.fromAccount === 'card' ? 'Карта → наличные' : 'Наличные → карта';
+          const title = dirLabel + (tx.note ? ' · ' + tx.note : '');
+          return `<div class="tx-item">
+            <div class="tx-icon" style="background:#E0E7FF">⇄</div>
+            <div class="tx-info">
+              <div class="tx-title">${title}</div>
+              <div class="tx-meta">${formatDate(tx.date)} · ${fromIcon}→${toIcon}</div>
+            </div>
+            <div class="tx-amount" style="color:#4F46E5">${formatMoney(tx.amount)}</div>
+            <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
+          </div>`;
+        }
         const accIcon = (tx.account || 'card') === 'cash' ? '💵' : '💳';
         if (tx.type === 'income') {
           const src = state.sources.find(s => s.id === tx.sourceId);
@@ -2031,6 +2087,41 @@
           const radio = opt.querySelector('input');
           if (radio) radio.checked = true;
         });
+      });
+
+      // Transfer between accounts
+      document.getElementById('btnTransfer').addEventListener('click', () => {
+        const amount = parseFloat(document.getElementById('transferAmount').value);
+        const date = document.getElementById('transferDate').value;
+        const note = document.getElementById('transferNote').value.trim();
+        const dir = document.querySelector('input[name="transferDir"]:checked')?.value || 'card_to_cash';
+
+        if (!amount || amount <= 0) return toast('Введите сумму');
+        if (!date) return toast('Укажите дату');
+
+        const fromAccount = dir === 'card_to_cash' ? 'card' : 'cash';
+        const toAccount = dir === 'card_to_cash' ? 'cash' : 'card';
+        const balances = getAccountBalances();
+        const available = fromAccount === 'card' ? balances.card : balances.cash;
+        if (amount > available + 0.001) {
+          return toast('Недостаточно средств на счёте');
+        }
+
+        state.transactions.push({
+          id: uid(),
+          type: 'transfer',
+          amount,
+          date,
+          fromAccount,
+          toAccount,
+          note: note || undefined
+        });
+        saveState();
+        document.getElementById('transferAmount').value = '';
+        document.getElementById('transferNote').value = '';
+        renderAccountBalances();
+        renderHistory();
+        toast(fromAccount === 'card' ? 'Переведено на наличные' : 'Переведено на карту');
       });
 
       // Save initial balances
@@ -2353,6 +2444,7 @@
       loadState();
       document.getElementById('incomeDate').value = today();
       document.getElementById('expenseDate').value = today();
+      document.getElementById('transferDate').value = today();
       document.getElementById('binId').value = syncConfig.binId || '';
       document.getElementById('masterKey').value = syncConfig.masterKey || '';
 
