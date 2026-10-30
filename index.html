@@ -467,13 +467,19 @@
     .tx-amount.income { color: var(--income); }
     .tx-amount.expense { color: var(--expense); }
 
-    .tx-delete {
+    .tx-delete, .tx-edit {
       background: none;
       border: none;
       color: #94A3B8;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       padding: 4px;
       cursor: pointer;
+    }
+    .tx-edit:hover { color: var(--primary); }
+    .tx-delete:hover { color: var(--expense); }
+    .split-cat {
+      font-size: 16px; /* меньше автозума на iOS */
+      max-width: 55%;
     }
 
     /* Categories management */
@@ -952,7 +958,7 @@
   <!-- SCREEN: Expenses -->
   <div class="screen" id="screen-expense">
     <div class="card">
-      <div class="card-title">Добавить расход</div>
+      <div class="card-title" id="expenseFormTitle">Добавить расход</div>
       <div class="form-group">
         <label>Откуда списать</label>
         <div class="account-toggle" id="expenseAccountToggle">
@@ -976,6 +982,7 @@
       </div>
 
       <div class="card-title" style="margin-top:12px">Разбить по категориям</div>
+      <p class="text-sm text-muted mb-2">В списке: категория или «Категория → подкатегория»</p>
       <div class="remaining-hint ok" id="remainingHint">Осталось распределить: 0 Br</div>
       <div class="splits-list" id="splitsList"></div>
       <button class="btn btn-add" id="btnAddSplit">+ Добавить категорию</button>
@@ -985,6 +992,7 @@
         <input type="text" id="expenseNote" placeholder="Например: продукты">
       </div>
       <button class="btn btn-primary" id="btnAddExpense" style="margin-top:8px">Добавить расход</button>
+      <button class="btn btn-ghost hidden" id="btnCancelExpenseEdit" style="width:100%;margin-top:8px">Отмена редактирования</button>
     </div>
 
     <div class="card">
@@ -1216,6 +1224,7 @@
     let editingId = null;
     let parentForSub = null;
     let selectedColor = PRESET_COLORS[0];
+    let editingExpenseId = null;
     let syncTimer = null;
     let saveTimeout = null;
 
@@ -1258,18 +1267,19 @@
     }
 
     function buildCategoryOptions(selectedId = '') {
+      // Flat list (без optgroup) — стабильно работает на мобильных
       let html = '';
       getTopCategories().forEach(parent => {
         const subs = getSubcategories(parent.id);
+        const parentSelected = parent.id === selectedId ? 'selected' : '';
         if (subs.length === 0) {
-          html += `<option value="${parent.id}" ${parent.id === selectedId ? 'selected' : ''}>${parent.name}</option>`;
+          html += `<option value="${parent.id}" ${parentSelected}>${parent.name}</option>`;
         } else {
-          html += `<optgroup label="${parent.name}">`;
-          html += `<option value="${parent.id}" ${parent.id === selectedId ? 'selected' : ''}>${parent.name} (общее)</option>`;
+          html += `<option value="${parent.id}" ${parentSelected}>${parent.name}</option>`;
           subs.forEach(sub => {
-            html += `<option value="${sub.id}" ${sub.id === selectedId ? 'selected' : ''}>↳ ${sub.name}</option>`;
+            const subSelected = sub.id === selectedId ? 'selected' : '';
+            html += `<option value="${sub.id}" ${subSelected}>${parent.name} → ${sub.name}</option>`;
           });
-          html += `</optgroup>`;
         }
       });
       return html || '<option value="">Нет категорий</option>';
@@ -1813,6 +1823,7 @@
             <div class="tx-meta">${formatDate(tx.date)} · ${accIcon}</div>
           </div>
           <div class="tx-amount expense">−${formatMoney(tx.amount)}</div>
+          <button class="tx-edit" data-id="${tx.id}" title="Изменить">✎</button>
           <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
         </div>`;
       }).join('');
@@ -1905,6 +1916,7 @@
               <div class="tx-meta">${formatDate(tx.date)} · ${accIcon}${tx.note ? ' · 📝' : ''}</div>
             </div>
             <div class="tx-amount expense">−${formatMoney(tx.amount)}</div>
+            <button class="tx-edit" data-id="${tx.id}" title="Изменить">✎</button>
             <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
           </div>`;
         }
@@ -2017,6 +2029,59 @@
         categoryId: r.querySelector('.split-cat').value,
         amount: parseFloat(r.querySelector('.split-amount').value) || 0
       })).filter(s => s.amount > 0);
+    }
+
+    function setExpenseAccountUI(account) {
+      const acc = account === 'cash' ? 'cash' : 'card';
+      document.querySelectorAll('#expenseAccountToggle .account-option').forEach(opt => {
+        const isActive = opt.dataset.account === acc;
+        opt.classList.toggle('active', isActive);
+        const radio = opt.querySelector('input');
+        if (radio) radio.checked = isActive;
+      });
+    }
+
+    function resetExpenseForm() {
+      editingExpenseId = null;
+      document.getElementById('expenseFormTitle').textContent = 'Добавить расход';
+      document.getElementById('btnAddExpense').textContent = 'Добавить расход';
+      document.getElementById('btnCancelExpenseEdit').classList.add('hidden');
+      document.getElementById('expenseAmount').value = '';
+      document.getElementById('expenseNote').value = '';
+      document.getElementById('expenseDate').value = today();
+      setExpenseAccountUI('card');
+      document.getElementById('splitsList').innerHTML = '';
+      addSplitRow();
+      updateRemaining();
+    }
+
+    function startEditExpense(id) {
+      const tx = state.transactions.find(t => t.id === id && t.type === 'expense');
+      if (!tx) return toast('Расход не найден');
+
+      editingExpenseId = id;
+      document.getElementById('expenseFormTitle').textContent = 'Редактировать расход';
+      document.getElementById('btnAddExpense').textContent = 'Сохранить изменения';
+      document.getElementById('btnCancelExpenseEdit').classList.remove('hidden');
+
+      document.getElementById('expenseAmount').value = tx.amount;
+      document.getElementById('expenseDate').value = tx.date;
+      document.getElementById('expenseNote').value = tx.note || '';
+      setExpenseAccountUI(tx.account || 'card');
+
+      document.getElementById('splitsList').innerHTML = '';
+      const splits = tx.splits && tx.splits.length ? tx.splits : [{ categoryId: '', amount: tx.amount }];
+      splits.forEach(sp => addSplitRow(sp.categoryId, sp.amount));
+      updateRemaining();
+
+      // Перейти на экран расходов
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      const navExp = document.querySelector('.nav-item[data-screen="expense"]');
+      if (navExp) navExp.classList.add('active');
+      document.getElementById('screen-expense').classList.add('active');
+      renderExpenseList();
+      window.scrollTo(0, 0);
     }
 
     // ========== MODAL ==========
@@ -2269,7 +2334,7 @@
       // Add split
       document.getElementById('btnAddSplit').addEventListener('click', () => addSplitRow());
 
-      // Expense add
+      // Expense add / edit
       document.getElementById('btnAddExpense').addEventListener('click', () => {
         const amount = parseFloat(document.getElementById('expenseAmount').value);
         const date = document.getElementById('expenseDate').value;
@@ -2280,39 +2345,63 @@
         if (!amount || amount <= 0) return toast('Введите общую сумму');
         if (!date) return toast('Укажите дату');
         if (splits.length === 0) return toast('Добавьте хотя бы одну категорию');
+        if (splits.some(s => !s.categoryId)) return toast('Выберите категорию в каждой строке');
 
         const splitSum = splits.reduce((s, sp) => s + sp.amount, 0);
         if (Math.abs(splitSum - amount) > 0.05) {
           return toast('Сумма категорий должна равняться общей сумме');
         }
 
-        state.transactions.push({
-          id: uid(),
-          type: 'expense',
-          amount,
-          date,
-          account,
-          splits,
-          note: note || undefined
-        });
-        saveState();
-        document.getElementById('expenseAmount').value = '';
-        document.getElementById('expenseNote').value = '';
-        document.getElementById('splitsList').innerHTML = '';
-        addSplitRow();
-        updateRemaining();
-        renderExpenseList();
-        renderAccountBalances();
-        renderHistory();
-        toast('Расход добавлен');
+        if (editingExpenseId) {
+          const tx = state.transactions.find(t => t.id === editingExpenseId);
+          if (!tx) return toast('Запись не найдена');
+          tx.amount = amount;
+          tx.date = date;
+          tx.account = account;
+          tx.splits = splits;
+          tx.note = note || undefined;
+          saveState();
+          resetExpenseForm();
+          renderExpenseList();
+          renderAccountBalances();
+          renderHistory();
+          renderStats();
+          toast('Расход обновлён');
+        } else {
+          state.transactions.push({
+            id: uid(),
+            type: 'expense',
+            amount,
+            date,
+            account,
+            splits,
+            note: note || undefined
+          });
+          saveState();
+          resetExpenseForm();
+          renderExpenseList();
+          renderAccountBalances();
+          renderHistory();
+          toast('Расход добавлен');
+        }
       });
 
-      // Delete transactions (delegated)
+      document.getElementById('btnCancelExpenseEdit').addEventListener('click', () => {
+        resetExpenseForm();
+        toast('Редактирование отменено');
+      });
+
+      // Delete / edit transactions (delegated)
       document.addEventListener('click', e => {
+        if (e.target.classList.contains('tx-edit')) {
+          startEditExpense(e.target.dataset.id);
+          return;
+        }
         if (e.target.classList.contains('tx-delete')) {
           const id = e.target.dataset.id;
           if (confirm('Удалить эту запись?')) {
             state.transactions = state.transactions.filter(t => t.id !== id);
+            if (editingExpenseId === id) resetExpenseForm();
             saveState();
             renderIncomeList();
             renderExpenseList();
