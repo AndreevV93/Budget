@@ -887,6 +887,13 @@
       </div>
     </div>
 
+    <div class="card" id="linkedAnalysisCard">
+      <div class="card-title">Одинаковые имена: приход − расход</div>
+      <p class="text-sm text-muted mb-2">Если источник дохода и категория расхода называются одинаково (например «Мама»), цвет общий, а здесь — разница за период.</p>
+      <div id="linkedAnalysisList"></div>
+      <div class="empty-state hidden" id="linkedAnalysisEmpty">Нет совпадений имён или операций за период</div>
+    </div>
+
     <div class="card">
       <div class="card-title">Расходы по категориям</div>
       <div class="chart-container">
@@ -1258,6 +1265,117 @@
       return cat.name;
     }
 
+    function normalizeName(name) {
+      return (name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    /** Общий цвет для одинаковых названий источника и категории */
+    function syncLinkedColors(name, color) {
+      if (!name || !color) return;
+      const key = normalizeName(name);
+      state.categories.forEach(c => {
+        if (normalizeName(c.name) === key) c.color = color;
+      });
+      state.sources.forEach(s => {
+        if (normalizeName(s.name) === key) s.color = color;
+      });
+    }
+
+    /** При загрузке: выровнять цвета у уже совпадающих имён */
+    function alignLinkedEntityColors() {
+      const byName = {};
+      state.sources.forEach(s => {
+        const k = normalizeName(s.name);
+        if (!k) return;
+        if (!byName[k]) byName[k] = { color: s.color, name: s.name };
+      });
+      state.categories.forEach(c => {
+        const k = normalizeName(c.name);
+        if (!k) return;
+        if (byName[k]) {
+          // общий цвет: приоритет у уже совпавшего
+          const color = byName[k].color || c.color;
+          syncLinkedColors(c.name, color || '#8B5CF6');
+        } else {
+          byName[k] = { color: c.color, name: c.name };
+        }
+      });
+    }
+
+    function getLinkedNames() {
+      const sourceNames = new Set(state.sources.map(s => normalizeName(s.name)).filter(Boolean));
+      const catNames = new Set(state.categories.map(c => normalizeName(c.name)).filter(Boolean));
+      const linked = [];
+      sourceNames.forEach(k => {
+        if (catNames.has(k)) {
+          const src = state.sources.find(s => normalizeName(s.name) === k);
+          const cat = state.categories.find(c => normalizeName(c.name) === k);
+          linked.push({
+            key: k,
+            displayName: (src && src.name) || (cat && cat.name) || k,
+            color: (src && src.color) || (cat && cat.color) || '#64748B'
+          });
+        }
+      });
+      return linked;
+    }
+
+    function renderLinkedAnalysis(incomes, expenses) {
+      const list = document.getElementById('linkedAnalysisList');
+      const empty = document.getElementById('linkedAnalysisEmpty');
+      if (!list) return;
+
+      const linked = getLinkedNames();
+      if (linked.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        empty.textContent = 'Нет одинаковых названий у источников и категорий';
+        return;
+      }
+
+      const rows = linked.map(item => {
+        const incomeSum = incomes
+          .filter(tx => {
+            const src = state.sources.find(s => s.id === tx.sourceId);
+            return src && normalizeName(src.name) === item.key;
+          })
+          .reduce((s, t) => s + t.amount, 0);
+
+        let expenseSum = 0;
+        expenses.forEach(tx => {
+          (tx.splits || []).forEach(sp => {
+            const cat = getCategory(sp.categoryId);
+            if (cat && normalizeName(cat.name) === item.key) {
+              expenseSum += sp.amount;
+            }
+          });
+        });
+
+        const net = incomeSum - expenseSum;
+        if (incomeSum === 0 && expenseSum === 0) return null;
+
+        const netClass = net >= 0 ? 'income' : 'expense';
+        const netSign = net > 0 ? '+' : '';
+        return `<div class="tx-item" style="border-bottom:1px solid var(--border)">
+          <div class="cat-color" style="background:${item.color};width:28px;height:28px;border-radius:8px;flex-shrink:0"></div>
+          <div class="tx-info">
+            <div class="tx-title">${item.displayName}</div>
+            <div class="tx-meta">+${formatMoney(incomeSum)} / −${formatMoney(expenseSum)}</div>
+          </div>
+          <div class="tx-amount ${netClass}">${netSign}${formatMoney(net)}</div>
+        </div>`;
+      }).filter(Boolean);
+
+      if (rows.length === 0) {
+        list.innerHTML = '';
+        empty.classList.remove('hidden');
+        empty.textContent = 'Нет операций по совпадающим именам за период';
+        return;
+      }
+      empty.classList.add('hidden');
+      list.innerHTML = rows.join('');
+    }
+
     function getTopCategories() {
       return state.categories.filter(c => !c.parentId);
     }
@@ -1419,6 +1537,8 @@
         const sc = localStorage.getItem(SYNC_KEY);
         if (sc) syncConfig = { ...syncConfig, ...JSON.parse(sc) };
       } catch (e) {}
+
+      alignLinkedEntityColors();
     }
 
     function saveState(skipSync = false) {
@@ -1520,6 +1640,7 @@
         if (data.initialBalances) state.initialBalances = data.initialBalances;
         if (data.setupComplete !== undefined) state.setupComplete = !!data.setupComplete;
         state.transactions.forEach(tx => { if (!tx.account) tx.account = 'card'; });
+        alignLinkedEntityColors();
 
         saveState(true);
         syncConfig.lastSync = new Date().toISOString();
@@ -1648,6 +1769,8 @@
       document.getElementById('sumExpense').textContent = formatMoney(totalExpense);
       document.getElementById('sumBalance').textContent = formatMoney(balance);
       document.getElementById('sumBalance').style.color = balance >= 0 ? 'var(--income)' : 'var(--expense)';
+
+      renderLinkedAnalysis(incomes, expenses);
 
       // Expense by category (aggregate to top-level)
       const expByCat = {};
@@ -2475,28 +2598,33 @@
 
         if (modalMode === 'category') {
           state.categories.push({ id: uid(), name, color: selectedColor, parentId: null });
+          syncLinkedColors(name, selectedColor);
         } else if (modalMode === 'subcategory') {
           const parent = getCategory(parentForSub);
+          const color = selectedColor || (parent ? parent.color : PRESET_COLORS[0]);
           state.categories.push({
             id: uid(),
             name,
-            color: selectedColor || (parent ? parent.color : PRESET_COLORS[0]),
+            color,
             parentId: parentForSub
           });
+          syncLinkedColors(name, color);
         } else if (modalMode === 'edit-category') {
           const cat = getCategory(editingId);
           if (cat) {
             cat.name = name;
             cat.color = selectedColor;
-            // if top-level color changed, optionally update children without custom? keep children's own colors
+            syncLinkedColors(name, selectedColor);
           }
         } else if (modalMode === 'source') {
           state.sources.push({ id: uid(), name, color: selectedColor });
+          syncLinkedColors(name, selectedColor);
         } else if (modalMode === 'edit-source') {
           const src = state.sources.find(s => s.id === editingId);
           if (src) {
             src.name = name;
             src.color = selectedColor;
+            syncLinkedColors(name, selectedColor);
           }
         }
         saveState();
@@ -2505,6 +2633,7 @@
         renderSources();
         fillSourceSelect();
         refreshSplitCategorySelects();
+        renderStats();
         toast('Сохранено');
       });
 
@@ -2571,6 +2700,7 @@
             if (data.initialBalances) state.initialBalances = data.initialBalances;
             if (data.setupComplete !== undefined) state.setupComplete = !!data.setupComplete;
             state.transactions.forEach(tx => { if (!tx.account) tx.account = 'card'; });
+            alignLinkedEntityColors();
             saveState();
             renderAll();
             toast('Импортировано');
