@@ -294,37 +294,51 @@
     /* Splits for expenses */
     .splits-list {
       margin: 12px 0;
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
     }
 
     .split-row {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
       margin-bottom: 8px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
     }
 
     .split-row select {
-      flex: 1.4;
-      padding: 10px;
+      flex: 1 1 auto;
+      min-width: 0;
+      width: 0; /* flex distributes space, prevents overflow */
+      max-width: 100%;
+      padding: 10px 8px;
       border: 2px solid var(--border);
       border-radius: 10px;
-      font-size: 0.9rem;
+      font-size: 16px;
       font-family: inherit;
     }
 
-    .split-row input {
-      flex: 1;
-      padding: 10px;
+    .split-row input.split-amount {
+      flex: 0 0 88px;
+      width: 88px;
+      min-width: 88px;
+      max-width: 88px;
+      padding: 10px 6px;
       border: 2px solid var(--border);
       border-radius: 10px;
-      font-size: 0.9rem;
+      font-size: 16px;
       font-family: inherit;
       text-align: right;
+      box-sizing: border-box;
     }
 
     .split-row .remove-btn {
       width: 36px;
       height: 36px;
+      min-width: 36px;
       border: none;
       background: #FEE2E2;
       color: #DC2626;
@@ -477,10 +491,7 @@
     }
     .tx-edit:hover { color: var(--primary); }
     .tx-delete:hover { color: var(--expense); }
-    .split-cat {
-      font-size: 16px; /* меньше автозума на iOS */
-      max-width: 55%;
-    }
+    /* split-cat styles live under .split-row select */
 
     /* Categories management */
     .cat-list {
@@ -831,6 +842,10 @@
           <div class="account-value" id="balCash">0 Br</div>
         </div>
       </div>
+      <div class="text-sm text-muted text-center" style="margin-top:8px" id="balTotalHint">
+        Всего на руках: 0 Br
+      </div>
+      <div class="text-sm text-muted text-center" style="margin-top:4px;font-size:0.75rem" id="balCheckHint"></div>
 
       <div class="card" style="margin-top:12px;margin-bottom:0">
         <div class="card-title">Перевод между счетами</div>
@@ -882,10 +897,13 @@
         <div class="value" id="sumExpense">0 Br</div>
       </div>
       <div class="summary-item balance">
-        <div class="label">Баланс</div>
+        <div class="label">За период</div>
         <div class="value" id="sumBalance">0 Br</div>
       </div>
     </div>
+    <p class="text-sm text-muted text-center" style="margin:-6px 0 12px;font-size:0.75rem">
+      «За период» = доходы − расходы за выбранные даты (без стартовых остатков). Карта и наличные — остаток на сейчас.
+    </p>
 
     <div class="card" id="linkedAnalysisCard">
       <div class="card-title">Одинаковые имена: приход − расход</div>
@@ -1714,27 +1732,32 @@
     }
 
     // ========== ACCOUNT BALANCES ==========
+    function roundMoney(n) {
+      return Math.round((Number(n) || 0) * 100) / 100;
+    }
+
     function getAccountBalances() {
-      let card = state.initialBalances.card || 0;
-      let cash = state.initialBalances.cash || 0;
+      let card = roundMoney(state.initialBalances.card);
+      let cash = roundMoney(state.initialBalances.cash);
       state.transactions.forEach(tx => {
+        const amount = roundMoney(tx.amount);
         if (tx.type === 'transfer') {
           if (tx.fromAccount === 'card') {
-            card -= tx.amount;
-            cash += tx.amount;
+            card = roundMoney(card - amount);
+            cash = roundMoney(cash + amount);
           } else {
-            cash -= tx.amount;
-            card += tx.amount;
+            cash = roundMoney(cash - amount);
+            card = roundMoney(card + amount);
           }
           return;
         }
         const acc = tx.account || 'card';
         if (tx.type === 'income') {
-          if (acc === 'card') card += tx.amount;
-          else cash += tx.amount;
+          if (acc === 'card') card = roundMoney(card + amount);
+          else cash = roundMoney(cash + amount);
         } else if (tx.type === 'expense') {
-          if (acc === 'card') card -= tx.amount;
-          else cash -= tx.amount;
+          if (acc === 'card') card = roundMoney(card - amount);
+          else cash = roundMoney(cash - amount);
         }
       });
       return { card, cash };
@@ -1751,6 +1774,29 @@
       if (elCash) {
         elCash.textContent = formatMoney(cash);
         elCash.classList.toggle('negative', cash < 0);
+      }
+
+      const total = roundMoney(card + cash);
+      const hint = document.getElementById('balTotalHint');
+      if (hint) hint.textContent = `Всего на руках: ${formatMoney(total)}`;
+
+      // Сверка: стартовые + все доходы − все расходы = карта + наличные
+      const init = roundMoney((state.initialBalances.card || 0) + (state.initialBalances.cash || 0));
+      let allInc = 0, allExp = 0;
+      state.transactions.forEach(tx => {
+        if (tx.type === 'income') allInc = roundMoney(allInc + tx.amount);
+        if (tx.type === 'expense') allExp = roundMoney(allExp + tx.amount);
+      });
+      const expected = roundMoney(init + allInc - allExp);
+      const check = document.getElementById('balCheckHint');
+      if (check) {
+        if (Math.abs(expected - total) < 0.02) {
+          check.textContent = `Сверка OK: старт ${formatMoney(init)} + доходы − расходы = ${formatMoney(expected)}`;
+          check.style.color = 'var(--income)';
+        } else {
+          check.textContent = `Расхождение сверки: ожидали ${formatMoney(expected)}, на счетах ${formatMoney(total)}. Проверьте счёт (карта/наличные) у операций.`;
+          check.style.color = 'var(--expense)';
+        }
       }
     }
 
@@ -2106,33 +2152,69 @@
     }
 
     // ========== SPLITS ==========
-    function addSplitRow(categoryId = '', amount = '') {
+    let splitAutoFillLock = false;
+
+    function addSplitRow(categoryId = '', amount = '', skipAutoFill = false) {
       const list = document.getElementById('splitsList');
       const row = document.createElement('div');
       row.className = 'split-row';
+      const amountVal = amount === '' || amount === null || amount === undefined ? '' : amount;
       row.innerHTML = `
         <select class="split-cat">
           ${buildCategoryOptions(categoryId)}
         </select>
-        <input type="number" class="split-amount" placeholder="0" inputmode="decimal" min="0" step="0.01" value="${amount}">
-        <button type="button" class="remove-btn">×</button>
+        <input type="number" class="split-amount" placeholder="0" inputmode="decimal" min="0" step="0.01" value="${amountVal}">
+        <button type="button" class="remove-btn" aria-label="Удалить">×</button>
       `;
       list.appendChild(row);
       row.querySelector('.remove-btn').onclick = () => {
         row.remove();
-        updateRemaining();
+        autoFillLastSplit();
       };
-      row.querySelector('.split-amount').oninput = updateRemaining;
-      row.querySelector('.split-cat').onchange = updateRemaining;
-      updateRemaining();
+      row.querySelector('.split-amount').addEventListener('input', e => {
+        if (splitAutoFillLock) return;
+        const inputs = [...document.querySelectorAll('.split-amount')];
+        const isLast = inputs.length && inputs[inputs.length - 1] === e.target;
+        // если правят не последнюю строку — пересчитать последнюю
+        if (!isLast) autoFillLastSplit();
+        else updateRemainingHint();
+      });
+      row.querySelector('.split-cat').onchange = () => updateRemainingHint();
+      if (!skipAutoFill) autoFillLastSplit();
+      else updateRemainingHint();
     }
 
-    function updateRemaining() {
-      const total = parseFloat(document.getElementById('expenseAmount').value) || 0;
-      const splits = [...document.querySelectorAll('.split-amount')].map(i => parseFloat(i.value) || 0);
-      const used = splits.reduce((a, b) => a + b, 0);
-      const left = Math.round((total - used) * 100) / 100;
+    function autoFillLastSplit() {
+      if (splitAutoFillLock) return;
+      const total = roundMoney(document.getElementById('expenseAmount').value);
+      const inputs = [...document.querySelectorAll('#splitsList .split-amount')];
+      if (inputs.length === 0) {
+        updateRemainingHint();
+        return;
+      }
+
+      splitAutoFillLock = true;
+      if (inputs.length === 1) {
+        inputs[0].value = total ? String(total) : '';
+      } else {
+        let used = 0;
+        for (let i = 0; i < inputs.length - 1; i++) {
+          used = roundMoney(used + (parseFloat(inputs[i].value) || 0));
+        }
+        const last = roundMoney(total - used);
+        inputs[inputs.length - 1].value = String(last);
+      }
+      splitAutoFillLock = false;
+      updateRemainingHint();
+    }
+
+    function updateRemainingHint() {
+      const total = roundMoney(document.getElementById('expenseAmount').value);
+      const splits = [...document.querySelectorAll('#splitsList .split-amount')].map(i => parseFloat(i.value) || 0);
+      const used = roundMoney(splits.reduce((a, b) => a + b, 0));
+      const left = roundMoney(total - used);
       const hint = document.getElementById('remainingHint');
+      if (!hint) return;
 
       if (Math.abs(left) < 0.01) {
         hint.className = 'remaining-hint ok';
@@ -2146,11 +2228,16 @@
       }
     }
 
+    // совместимость со старыми вызовами
+    function updateRemaining() {
+      updateRemainingHint();
+    }
+
     function getSplits() {
-      const rows = document.querySelectorAll('.split-row');
+      const rows = document.querySelectorAll('#splitsList .split-row');
       return [...rows].map(r => ({
         categoryId: r.querySelector('.split-cat').value,
-        amount: parseFloat(r.querySelector('.split-amount').value) || 0
+        amount: roundMoney(r.querySelector('.split-amount').value)
       })).filter(s => s.amount > 0);
     }
 
@@ -2194,8 +2281,8 @@
 
       document.getElementById('splitsList').innerHTML = '';
       const splits = tx.splits && tx.splits.length ? tx.splits : [{ categoryId: '', amount: tx.amount }];
-      splits.forEach(sp => addSplitRow(sp.categoryId, sp.amount));
-      updateRemaining();
+      splits.forEach(sp => addSplitRow(sp.categoryId, sp.amount, true));
+      updateRemainingHint();
 
       // Перейти на экран расходов
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -2452,14 +2539,14 @@
       });
 
       // Expense amount change
-      document.getElementById('expenseAmount').addEventListener('input', updateRemaining);
+      document.getElementById('expenseAmount').addEventListener('input', () => autoFillLastSplit());
 
       // Add split
       document.getElementById('btnAddSplit').addEventListener('click', () => addSplitRow());
 
       // Expense add / edit
       document.getElementById('btnAddExpense').addEventListener('click', () => {
-        const amount = parseFloat(document.getElementById('expenseAmount').value);
+        const amount = roundMoney(document.getElementById('expenseAmount').value);
         const date = document.getElementById('expenseDate').value;
         const note = document.getElementById('expenseNote').value.trim();
         const splits = getSplits();
@@ -2470,7 +2557,7 @@
         if (splits.length === 0) return toast('Добавьте хотя бы одну категорию');
         if (splits.some(s => !s.categoryId)) return toast('Выберите категорию в каждой строке');
 
-        const splitSum = splits.reduce((s, sp) => s + sp.amount, 0);
+        const splitSum = roundMoney(splits.reduce((s, sp) => s + sp.amount, 0));
         if (Math.abs(splitSum - amount) > 0.05) {
           return toast('Сумма категорий должна равняться общей сумме');
         }
