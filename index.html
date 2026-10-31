@@ -1183,7 +1183,7 @@
       </div>
 
       <div class="card-title" style="margin-top:12px">Разбить по категориям</div>
-      <p class="text-sm text-muted mb-2">В списке: категория или «Категория → подкатегория»</p>
+      <p class="text-sm text-muted mb-2">В списке: категория или «Категория ◆ подкатегория»</p>
       <div class="remaining-hint ok" id="remainingHint">Осталось распределить: 0 Br</div>
       <div class="splits-list" id="splitsList"></div>
       <button class="btn btn-add" id="btnAddSplit">+ Добавить категорию</button>
@@ -1384,29 +1384,46 @@
     const SYNC_KEY = 'budget_sync_config';
 
     const DEFAULT_CATEGORIES = [
-      { id: 'c1', name: 'Питание', color: '#22C55E', parentId: null },
-      { id: 'c2', name: 'Объедалово', color: '#EF4444', parentId: null },
-      { id: 'c3', name: 'Настя', color: '#EC4899', parentId: null },
-      { id: 'c4', name: 'Теннис', color: '#3B82F6', parentId: null },
-      { id: 'c5', name: 'Автомобиль', color: '#6366F1', parentId: null },
-      { id: 'c6', name: 'Перекус', color: '#F59E0B', parentId: null },
-      { id: 'c7', name: 'Мама', color: '#8B5CF6', parentId: null },
-      { id: 'c8', name: 'Дом', color: '#14B8A6', parentId: null },
-      { id: 'c9', name: 'Пончики', color: '#F97316', parentId: null },
-      { id: 'c10', name: 'Квизы', color: '#06B6D4', parentId: null }
+      { id: 'c1', name: 'Питание', color: '#16A34A', parentId: null },
+      { id: 'c2', name: 'Объедалово', color: '#DC2626', parentId: null },
+      { id: 'c3', name: 'Настя', color: '#DB2777', parentId: null },
+      { id: 'c4', name: 'Теннис', color: '#2563EB', parentId: null },
+      { id: 'c5', name: 'Автомобиль', color: '#4F46E5', parentId: null },
+      { id: 'c6', name: 'Перекус', color: '#CA8A04', parentId: null },
+      { id: 'c7', name: 'Мама', color: '#9333EA', parentId: null },
+      { id: 'c8', name: 'Дом', color: '#0F766E', parentId: null },
+      { id: 'c9', name: 'Пончики', color: '#EA580C', parentId: null },
+      { id: 'c10', name: 'Квизы', color: '#0891B2', parentId: null }
     ];
 
     const DEFAULT_SOURCES = [
       { id: 's1', name: 'Работа', color: '#16A34A' },
-      { id: 's2', name: 'Настя', color: '#EC4899' },
-      { id: 's3', name: 'Мама', color: '#8B5CF6' }
+      { id: 's2', name: 'Настя', color: '#DB2777' },
+      { id: 's3', name: 'Мама', color: '#9333EA' }
     ];
 
+    // Контрастная палитра без близких оттенков
     const PRESET_COLORS = [
-      '#22C55E', '#EF4444', '#EC4899', '#3B82F6', '#6366F1',
-      '#F59E0B', '#8B5CF6', '#14B8A6', '#F97316', '#06B6D4',
-      '#84CC16', '#F43F5E', '#A855F7', '#0EA5E9', '#EAB308',
-      '#10B981', '#DC2626', '#D946EF', '#2563EB', '#7C3AED'
+      '#DC2626', // красный
+      '#2563EB', // синий
+      '#16A34A', // зелёный
+      '#CA8A04', // горчичный
+      '#9333EA', // фиолетовый
+      '#EA580C', // оранжевый
+      '#0891B2', // циан
+      '#DB2777', // розовый
+      '#4F46E5', // индиго
+      '#65A30D', // лайм
+      '#0F766E', // тёмный бирюзовый
+      '#B45309', // янтарный
+      '#7C3AED', // яркий фиолет
+      '#BE123C', // малиновый
+      '#1D4ED8', // насыщенный синий
+      '#15803D', // тёмно-зелёный
+      '#C2410C', // терракота
+      '#6D28D9', // глубокий фиолет
+      '#0E7490', // морской
+      '#A21CAF'  // пурпур
     ];
 
     const ACCOUNTS = {
@@ -1488,7 +1505,7 @@
       if (!cat) return '—';
       if (cat.parentId) {
         const parent = getCategory(cat.parentId);
-        return parent ? `${parent.name} → ${cat.name}` : cat.name;
+        return parent ? `${parent.name} ◆ ${cat.name}` : cat.name;
       }
       return cat.name;
     }
@@ -1518,13 +1535,91 @@
       });
     }
 
+    function hexToRgb(hex) {
+      const h = (hex || '').replace('#', '');
+      if (h.length !== 6) return { r: 0, g: 0, b: 0 };
+      return {
+        r: parseInt(h.slice(0, 2), 16),
+        g: parseInt(h.slice(2, 4), 16),
+        b: parseInt(h.slice(4, 6), 16)
+      };
+    }
+
+    /** Евклидово расстояние в RGB — для отсечения похожих цветов */
+    function colorDistance(a, b) {
+      const ca = hexToRgb(a);
+      const cb = hexToRgb(b);
+      const dr = ca.r - cb.r, dg = ca.g - cb.g, db = ca.b - cb.b;
+      return Math.sqrt(dr * dr + dg * dg + db * db);
+    }
+
+    const MIN_COLOR_DISTANCE = 90;
+
+    function isColorTooClose(color, usedColors) {
+      const c = (color || '').toLowerCase();
+      return (usedColors || []).some(u => {
+        if (!u) return false;
+        if (u.toLowerCase() === c) return true;
+        return colorDistance(color, u) < MIN_COLOR_DISTANCE;
+      });
+    }
+
     function pickAlternateColor(excludeColors, preferNot) {
-      const excluded = new Set((excludeColors || []).map(c => (c || '').toLowerCase()));
-      if (preferNot) excluded.add(preferNot.toLowerCase());
+      const used = (excludeColors || []).slice();
+      if (preferNot) used.push(preferNot);
       for (const c of PRESET_COLORS) {
-        if (!excluded.has(c.toLowerCase())) return c;
+        if (!isColorTooClose(c, used)) return c;
       }
-      return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+      // запасной вариант — максимально далёкий от всех used
+      let best = PRESET_COLORS[0], bestDist = -1;
+      PRESET_COLORS.forEach(c => {
+        const minD = used.length
+          ? Math.min(...used.map(u => colorDistance(c, u)))
+          : 999;
+        if (minD > bestDist) { bestDist = minD; best = c; }
+      });
+      return best;
+    }
+
+    /** Уникальные контрастные цвета у категорий сверху вниз; нижние дубликаты/похожие меняются */
+    function enforceUniqueCategoryColors() {
+      const tops = getTopCategories();
+      const used = [];
+      const messages = [];
+      tops.forEach(cat => {
+        let color = cat.color || PRESET_COLORS[0];
+        if (isColorTooClose(color, used)) {
+          color = pickAlternateColor(used, color);
+          cat.color = color;
+          getSubcategories(cat.id).forEach(s => { s.color = color; });
+          syncLinkedColorsFromExpense(cat.name, color);
+          messages.push({ name: cat.name, color });
+        } else {
+          cat.color = color;
+          getSubcategories(cat.id).forEach(s => { s.color = color; });
+        }
+        used.push(color);
+      });
+      return messages;
+    }
+
+    function runSettingsColorAudit() {
+      const messages = enforceUniqueCategoryColors();
+      applyParentColorsToSubs();
+      if (messages.length) {
+        saveState();
+        renderCategories();
+        renderSources();
+        refreshSplitCategorySelects();
+        // одно сводное сообщение + тосты по категориям
+        const el = document.getElementById('toast');
+        const names = messages.map(m => m.name).join(', ');
+        el.innerHTML = `Цвета обновлены: ${names}`;
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 3200);
+        setTimeout(() => showColorChangeToasts(messages), 800);
+      }
+      return messages;
     }
 
     /** Назначить цвет категории расходов; подкатегории наследуют; конфликт → сдвиг занятого */
@@ -1534,12 +1629,12 @@
       const target = cat.parentId ? getCategory(cat.parentId) : cat;
       if (!target) return [];
       const messages = [];
-      const usedByOthers = state.categories.filter(c =>
-        !c.parentId && c.id !== target.id && (c.color || '').toLowerCase() === (newColor || '').toLowerCase()
-      );
-      usedByOthers.forEach(other => {
-        const taken = state.categories.filter(c => !c.parentId).map(c => c.color);
-        const alt = pickAlternateColor(taken, newColor);
+      const others = state.categories.filter(c => !c.parentId && c.id !== target.id);
+      others.forEach(other => {
+        if (!isColorTooClose(newColor, [other.color])) return;
+        const taken = state.categories.filter(c => !c.parentId && c.id !== other.id).map(c => c.color);
+        taken.push(newColor);
+        const alt = pickAlternateColor(taken, other.color);
         other.color = alt;
         getSubcategories(other.id).forEach(s => { s.color = alt; });
         syncLinkedColorsFromExpense(other.name, alt);
@@ -1675,7 +1770,7 @@
           html += `<option value="${parent.id}" ${parentSelected}>${parent.name}</option>`;
           subs.forEach(sub => {
             const subSelected = sub.id === selectedId ? 'selected' : '';
-            html += `<option value="${sub.id}" ${subSelected}>${parent.name} → ${sub.name}</option>`;
+            html += `<option value="${sub.id}" ${subSelected}>${parent.name} ◆ ${sub.name}</option>`;
           });
         }
       });
@@ -2286,11 +2381,58 @@
           plugins: {
             legend: { display: false },
             tooltip: {
+              displayColors: type !== 'expense',
+              bodySpacing: 4,
+              padding: 10,
+              titleFont: { size: 13, weight: '600' },
+              bodyFont: { size: 12 },
               callbacks: {
+                title: (items) => {
+                  if (!items.length) return '';
+                  return items[0].label || '';
+                },
                 label: (ctx) => {
-                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                  const pct = total ? Math.round(ctx.raw / total * 100) : 0;
-                  return `${ctx.label}: ${formatMoney(ctx.raw)} (${pct}%)`;
+                  const totalAll = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const catSum = ctx.raw;
+                  const pctAll = totalAll ? Math.round(catSum / totalAll * 100) : 0;
+
+                  if (type !== 'expense') {
+                    return `${formatMoney(catSum)} (${pctAll}%)`;
+                  }
+
+                  const rootId = expenseChartMeta.rootIds[ctx.dataIndex];
+                  const expenses = expenseChartMeta.expenses || [];
+                  const byLeaf = {};
+                  expenses.forEach(tx => {
+                    (tx.splits || []).forEach(sp => {
+                      if (getRootCategoryId(sp.categoryId) !== rootId) return;
+                      if (typeof categoryMatchesFilter === 'function' && !categoryMatchesFilter(sp.categoryId)) return;
+                      byLeaf[sp.categoryId] = (byLeaf[sp.categoryId] || 0) + sp.amount;
+                    });
+                  });
+                  const entries = Object.entries(byLeaf)
+                    .filter(([, v]) => v > 0)
+                    .sort((a, b) => b[1] - a[1]);
+
+                  const lines = [
+                    `Итого: ${formatMoney(catSum)} · ${pctAll}% от всех трат`
+                  ];
+                  if (entries.length === 0) {
+                    lines.push('Нет подкатегорий');
+                    return lines;
+                  }
+                  entries.forEach(([id, sum]) => {
+                    const cat = getCategory(id);
+                    const name = cat && cat.parentId
+                      ? cat.name
+                      : (cat ? `${cat.name} (общее)` : '—');
+                    const pctOfCat = catSum ? Math.round(sum / catSum * 100) : 0;
+                    const pctOfAll = totalAll ? Math.round(sum / totalAll * 100) : 0;
+                    lines.push(
+                      `${name}: ${formatMoney(sum)} · ${pctOfCat}% кат. · ${pctOfAll}% всего`
+                    );
+                  });
+                  return lines;
                 }
               }
             }
@@ -2565,7 +2707,7 @@
           html += `
             <div class="cat-item sub">
               <div class="cat-color" style="background:${sub.color}"></div>
-              <div class="cat-name">↳ ${sub.name}</div>
+              <div class="cat-name">◆ ${sub.name}</div>
               <div class="cat-actions">
                 <button class="icon-btn move-cat-up" data-id="${sub.id}" title="Выше">↑</button>
                 <button class="icon-btn move-cat-down" data-id="${sub.id}" title="Ниже">↓</button>
@@ -2817,6 +2959,7 @@
           }
           if (btn.dataset.screen === 'history') renderHistory();
           if (btn.dataset.screen === 'settings') {
+            runSettingsColorAudit();
             renderCategories();
             renderSources();
             updateSyncUI(syncConfig.binId ? 'ok' : 'local');
