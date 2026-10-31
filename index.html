@@ -1505,9 +1505,17 @@
       if (!cat) return '—';
       if (cat.parentId) {
         const parent = getCategory(cat.parentId);
-        return parent ? `${parent.name} ◆ ${cat.name}` : cat.name;
+        return parent ? `${parent.name} ◆ ${cat.name}` : `◆ ${cat.name}`;
       }
       return cat.name;
+    }
+
+    /** Имя в списке под родителем: подкатегория с ◆ */
+    function getCategoryLeafLabel(catId) {
+      const cat = getCategory(catId);
+      if (!cat) return '—';
+      if (cat.parentId) return `◆ ${cat.name}`;
+      return `${cat.name} (общее)`;
     }
 
     function normalizeName(name) {
@@ -2422,10 +2430,7 @@
                     return lines;
                   }
                   entries.forEach(([id, sum]) => {
-                    const cat = getCategory(id);
-                    const name = cat && cat.parentId
-                      ? cat.name
-                      : (cat ? `${cat.name} (общее)` : '—');
+                    const name = getCategoryLeafLabel(id);
                     const pctOfCat = catSum ? Math.round(sum / catSum * 100) : 0;
                     const pctOfAll = totalAll ? Math.round(sum / totalAll * 100) : 0;
                     lines.push(
@@ -2493,8 +2498,7 @@
         html += `<div class="text-muted">Нет данных</div>`;
       } else {
         entries.sort((a, b) => b[1] - a[1]).forEach(([id, sum]) => {
-          const cat = getCategory(id);
-          const name = cat && cat.parentId ? cat.name : (cat ? cat.name + ' (общее)' : '—');
+          const name = getCategoryLeafLabel(id);
           const pct = total ? Math.round(sum / total * 100) : 0;
           html += `<div class="expense-line">
             <span class="el-name"><span class="legend-dot" style="background:${root.color};display:inline-block;margin-right:6px"></span>${name}</span>
@@ -2560,6 +2564,38 @@
       `;
     }
 
+    function buildIncomeDetailHtml(tx) {
+      const around = getBalanceAroundTx(tx.id);
+      const src = state.sources.find(s => s.id === tx.sourceId);
+      const before = around ? formatMoney(around.before) : '—';
+      const after = around ? formatMoney(around.after) : '—';
+      const acc = around ? accountLabel(around.account) : accountLabel(tx.account);
+      return `
+        <div class="d-row"><span>Счёт</span><strong>${acc}</strong></div>
+        <div class="d-row"><span>Баланс до</span><strong>${before}</strong></div>
+        <div class="d-row"><span>Источник</span><strong>${src ? src.name : '—'}</strong></div>
+        <div class="d-row"><span>Сумма</span><strong class="income">+${formatMoney(tx.amount)}</strong></div>
+        <div class="d-row"><span>Остаток после</span><strong>${after}</strong></div>
+        <div class="d-row"><span>Заметка</span><strong>${tx.note ? tx.note : '—'}</strong></div>
+      `;
+    }
+
+    function buildTransferDetailHtml(tx) {
+      return `
+        <div class="d-row"><span>Откуда</span><strong>${accountLabel(tx.fromAccount)}</strong></div>
+        <div class="d-row"><span>Куда</span><strong>${accountLabel(tx.toAccount)}</strong></div>
+        <div class="d-row"><span>Сумма</span><strong style="color:#4F46E5">${formatMoney(tx.amount)}</strong></div>
+        <div class="d-row"><span>Заметка</span><strong>${tx.note ? tx.note : '—'}</strong></div>
+      `;
+    }
+
+    function buildTxDetailHtml(tx) {
+      if (tx.type === 'expense') return buildExpenseDetailHtml(tx);
+      if (tx.type === 'income') return buildIncomeDetailHtml(tx);
+      if (tx.type === 'transfer') return buildTransferDetailHtml(tx);
+      return '';
+    }
+
     function renderExpenseList() {
       const list = document.getElementById('expenseList');
       const empty = document.getElementById('expenseListEmpty');
@@ -2578,7 +2614,7 @@
         const splitsText = (tx.splits || []).map(sp => getCategoryLabel(sp.categoryId)).join(', ');
         const accIcon = accountEmoji(tx.account);
         return `<div class="tx-wrap" data-tx-id="${tx.id}">
-          <div class="tx-item clickable" data-expand-id="${tx.id}">
+          <div class="tx-item clickable" data-expand="1">
             <div class="tx-icon expense">↓</div>
             <div class="tx-info">
               <div class="tx-title">${splitsText}${tx.note ? ' · ' + tx.note : ''}</div>
@@ -2588,7 +2624,7 @@
             <button class="tx-edit" data-id="${tx.id}" title="Изменить">✎</button>
             <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
           </div>
-          <div class="tx-detail" id="exp-detail-${tx.id}">${buildExpenseDetailHtml(tx)}</div>
+          <div class="tx-detail">${buildExpenseDetailHtml(tx)}</div>
         </div>`;
       }).join('');
     }
@@ -2640,38 +2676,37 @@
       }
       empty.classList.add('hidden');
       list.innerHTML = items.map(tx => {
+        let rowInner = '';
         if (tx.type === 'transfer') {
           const dirLabel = `${accountLabel(tx.fromAccount)} → ${accountLabel(tx.toAccount)}`;
           const title = dirLabel + (tx.note ? ' · ' + tx.note : '');
-          return `<div class="tx-item">
+          rowInner = `
             <div class="tx-icon" style="background:#E0E7FF">⇄</div>
             <div class="tx-info">
               <div class="tx-title">${title}</div>
               <div class="tx-meta">${formatDate(tx.date)} · ${accountEmoji(tx.fromAccount)}→${accountEmoji(tx.toAccount)}</div>
             </div>
             <div class="tx-amount" style="color:#4F46E5">${formatMoney(tx.amount)}</div>
-            <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
-          </div>`;
-        }
-        const accIcon = accountEmoji(tx.account);
-        if (tx.type === 'income') {
+            <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>`;
+        } else if (tx.type === 'income') {
           const src = state.sources.find(s => s.id === tx.sourceId);
           const title = (src ? src.name : '—') + (tx.note ? ' · ' + tx.note : '');
-          return `<div class="tx-item">
+          const accIcon = accountEmoji(tx.account);
+          rowInner = `
             <div class="tx-icon income">↑</div>
             <div class="tx-info">
               <div class="tx-title">${title}</div>
               <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}${tx.note ? ' · 📝' : ''}</div>
             </div>
             <div class="tx-amount income">+${formatMoney(tx.amount)}</div>
-            <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
-          </div>`;
+            <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>`;
         } else {
           const splitsText = (tx.splits || []).map(sp =>
             `${getCategoryLabel(sp.categoryId)} ${formatMoney(sp.amount)}`
           ).join(', ');
           const title = splitsText + (tx.note ? ' · ' + tx.note : '');
-          return `<div class="tx-item">
+          const accIcon = accountEmoji(tx.account);
+          rowInner = `
             <div class="tx-icon expense">↓</div>
             <div class="tx-info">
               <div class="tx-title">${title}</div>
@@ -2679,9 +2714,12 @@
             </div>
             <div class="tx-amount expense">−${formatMoney(tx.amount)}</div>
             <button class="tx-edit" data-id="${tx.id}" title="Изменить">✎</button>
-            <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
-          </div>`;
+            <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>`;
         }
+        return `<div class="tx-wrap" data-tx-id="${tx.id}">
+          <div class="tx-item clickable" data-expand="1">${rowInner}</div>
+          <div class="tx-detail">${buildTxDetailHtml(tx)}</div>
+        </div>`;
       }).join('');
     }
 
@@ -3227,10 +3265,10 @@
           }
           return;
         }
-        const expandRow = e.target.closest('[data-expand-id]');
+        const expandRow = e.target.closest('[data-expand="1"]');
         if (expandRow && !e.target.closest('.tx-edit') && !e.target.closest('.tx-delete')) {
-          const id = expandRow.dataset.expandId;
-          const detail = document.getElementById('exp-detail-' + id);
+          const wrap = expandRow.closest('.tx-wrap');
+          const detail = wrap && wrap.querySelector('.tx-detail');
           if (detail) detail.classList.toggle('open');
           return;
         }
