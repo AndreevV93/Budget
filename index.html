@@ -741,42 +741,185 @@
     }
     .accounts-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
     }
     .account-card {
       background: white;
-      border-radius: 16px;
-      padding: 16px;
+      border-radius: 14px;
+      padding: 12px 8px;
       box-shadow: var(--shadow);
       text-align: center;
       border: 2px solid transparent;
+      min-width: 0;
     }
-    .account-card.card-account {
-      border-color: #BFDBFE;
+    .account-card.visa-account {
+      border-color: #93C5FD;
       background: linear-gradient(180deg, #EFF6FF 0%, #fff 60%);
+    }
+    .account-card.mc-account {
+      border-color: #FDBA74;
+      background: linear-gradient(180deg, #FFF7ED 0%, #fff 60%);
     }
     .account-card.cash-account {
       border-color: #A7F3D0;
       background: linear-gradient(180deg, #ECFDF5 0%, #fff 60%);
     }
     .account-icon {
-      font-size: 1.6rem;
-      margin-bottom: 6px;
+      font-size: 1.35rem;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 28px;
     }
+    .brand-visa {
+      display: inline-block;
+      background: #1A1F71;
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-style: italic;
+      font-family: system-ui, sans-serif;
+    }
+    .brand-mc {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 36px;
+      height: 22px;
+    }
+    .brand-mc span {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: block;
+    }
+    .brand-mc .mc-r { background: #EB001B; margin-right: -6px; z-index: 1; }
+    .brand-mc .mc-y { background: #F79E1B; opacity: 0.95; }
     .account-label {
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       color: var(--text-secondary);
       font-weight: 500;
       margin-bottom: 4px;
+      line-height: 1.2;
+      word-break: break-word;
     }
     .account-value {
-      font-size: 1.25rem;
+      font-size: 0.95rem;
       font-weight: 700;
       color: var(--text);
+      word-break: break-word;
     }
     .account-value.negative {
       color: var(--expense);
+    }
+    .color-toast-swatch {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      vertical-align: -2px;
+      border: 1px solid rgba(0,0,0,0.15);
+      margin: 0 2px;
+    }
+    .expense-sub-detail {
+      margin-top: 10px;
+      padding: 10px;
+      background: #F8FAFC;
+      border-radius: 12px;
+      font-size: 0.85rem;
+    }
+    .expense-sub-detail h4 {
+      font-size: 0.8rem;
+      margin-bottom: 8px;
+      color: var(--text-secondary);
+    }
+    .expense-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      min-width: 0;
+    }
+    .expense-line:last-child { border-bottom: none; }
+    .expense-line .el-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .expense-line .el-sum { font-weight: 600; white-space: nowrap; }
+
+    .tx-item.clickable { cursor: pointer; }
+    .tx-item.clickable:hover { background: #F8FAFC; border-radius: 12px; }
+    .tx-detail {
+      display: none;
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px 12px;
+      background: #F8FAFC;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      line-height: 1.45;
+      color: var(--text-secondary);
+    }
+    .tx-detail.open { display: block; }
+    .tx-detail strong { color: var(--text); font-weight: 600; }
+    .tx-detail .d-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 3px 0;
+      min-width: 0;
+    }
+    .tx-detail .d-split {
+      padding-left: 10px;
+      border-left: 3px solid var(--border);
+      margin: 4px 0 6px;
+    }
+    .tx-wrap { width: 100%; border-bottom: 1px solid var(--border); padding: 8px 0; }
+    .tx-wrap:last-child { border-bottom: none; }
+    .tx-wrap .tx-item { border-bottom: none; padding: 0; }
+
+    .filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .filter-chip {
+      border: 1.5px solid var(--border);
+      background: #fff;
+      border-radius: 20px;
+      padding: 5px 10px;
+      font-size: 0.78rem;
+      font-family: inherit;
+      cursor: pointer;
+      color: var(--text-secondary);
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .filter-chip.active {
+      border-color: var(--primary);
+      background: #EEF2FF;
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .filter-section-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-secondary);
+      margin: 8px 0 6px;
+      font-weight: 600;
     }
 
     /* Account toggle (radio pills) */
@@ -831,10 +974,15 @@
     <div class="budget-section">
       <div class="card-title">Текущий бюджет</div>
       <div class="accounts-grid">
-        <div class="account-card card-account">
-          <div class="account-icon">💳</div>
-          <div class="account-label">Карта</div>
-          <div class="account-value" id="balCard">0 Br</div>
+        <div class="account-card visa-account">
+          <div class="account-icon"><span class="brand-visa">VISA</span></div>
+          <div class="account-label">Карта Visa</div>
+          <div class="account-value" id="balVisa">0 Br</div>
+        </div>
+        <div class="account-card mc-account">
+          <div class="account-icon"><span class="brand-mc"><span class="mc-r"></span><span class="mc-y"></span></span></div>
+          <div class="account-label">Карта MasterCard</div>
+          <div class="account-value" id="balMastercard">0 Br</div>
         </div>
         <div class="account-card cash-account">
           <div class="account-icon">💵</div>
@@ -849,15 +997,23 @@
 
       <div class="card" style="margin-top:12px;margin-bottom:0">
         <div class="card-title">Перевод между счетами</div>
-        <div class="account-toggle" id="transferDirectionToggle">
-          <label class="account-option active" data-dir="card_to_cash">
-            <input type="radio" name="transferDir" value="card_to_cash" checked>
-            <span class="opt-icon">💳→💵</span> Карта → наличные
-          </label>
-          <label class="account-option" data-dir="cash_to_card">
-            <input type="radio" name="transferDir" value="cash_to_card">
-            <span class="opt-icon">💵→💳</span> Наличные → карта
-          </label>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Откуда</label>
+            <select id="transferFrom">
+              <option value="visa">Visa</option>
+              <option value="mastercard">MasterCard</option>
+              <option value="cash">Наличные</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Куда</label>
+            <select id="transferTo">
+              <option value="cash">Наличные</option>
+              <option value="visa">Visa</option>
+              <option value="mastercard">MasterCard</option>
+            </select>
+          </div>
         </div>
         <div class="form-row">
           <div class="form-group">
@@ -887,6 +1043,16 @@
       <input type="date" id="dateTo">
     </div>
 
+    <div class="card" style="margin-bottom:12px;padding:12px 14px">
+      <div class="card-title" style="margin-bottom:4px">Фильтр операций</div>
+      <p class="text-sm text-muted mb-2">Выберите одну или несколько категорий/источников. Пустой фильтр = все.</p>
+      <div class="filter-section-title">Расходы (категории)</div>
+      <div class="filter-chips" id="filterCatChips"></div>
+      <div class="filter-section-title">Доходы (источники)</div>
+      <div class="filter-chips" id="filterSrcChips"></div>
+      <button class="btn btn-ghost btn-sm" id="btnClearFilters" style="width:100%;margin-top:6px">Сбросить фильтры</button>
+    </div>
+
     <div class="summary-grid">
       <div class="summary-item income">
         <div class="label">Доходы</div>
@@ -902,7 +1068,7 @@
       </div>
     </div>
     <p class="text-sm text-muted text-center" style="margin:-6px 0 12px;font-size:0.75rem">
-      «За период» = доходы − расходы за выбранные даты (без стартовых остатков). Карта и наличные — остаток на сейчас.
+      «За период» = доходы − расходы за выбранные даты (без стартовых остатков). Visa / MasterCard / наличные — остаток на сейчас.
     </p>
 
     <div class="card" id="linkedAnalysisCard">
@@ -914,9 +1080,11 @@
 
     <div class="card">
       <div class="card-title">Расходы по категориям</div>
+      <p class="text-sm text-muted mb-2">Нажмите на сегмент — увидите подкатегории</p>
       <div class="chart-container">
         <canvas id="expenseChart"></canvas>
       </div>
+      <div id="expenseSubDetail" class="expense-sub-detail hidden"></div>
       <div class="chart-legend" id="expenseLegend"></div>
       <div class="empty-state hidden" id="expenseEmpty">
         <div>Нет расходов за выбранный период</div>
@@ -941,14 +1109,18 @@
       <div class="card-title">Добавить доход</div>
       <div class="form-group">
         <label>Куда зачислить</label>
-        <div class="account-toggle" id="incomeAccountToggle">
-          <label class="account-option active" data-account="card">
-            <input type="radio" name="incomeAccount" value="card" checked>
-            <span class="opt-icon">💳</span> На карту
+        <div class="account-toggle" id="incomeAccountToggle" style="flex-wrap:wrap">
+          <label class="account-option active" data-account="visa">
+            <input type="radio" name="incomeAccount" value="visa" checked>
+            <span class="opt-icon"><span class="brand-visa" style="font-size:0.55rem;padding:2px 5px">VISA</span></span>
+          </label>
+          <label class="account-option" data-account="mastercard">
+            <input type="radio" name="incomeAccount" value="mastercard">
+            <span class="opt-icon"><span class="brand-mc" style="width:28px;height:16px"><span class="mc-r" style="width:12px;height:12px"></span><span class="mc-y" style="width:12px;height:12px"></span></span></span>
           </label>
           <label class="account-option" data-account="cash">
             <input type="radio" name="incomeAccount" value="cash">
-            <span class="opt-icon">💵</span> Наличные
+            <span class="opt-icon">💵</span>
           </label>
         </div>
       </div>
@@ -986,14 +1158,18 @@
       <div class="card-title" id="expenseFormTitle">Добавить расход</div>
       <div class="form-group">
         <label>Откуда списать</label>
-        <div class="account-toggle" id="expenseAccountToggle">
-          <label class="account-option active" data-account="card">
-            <input type="radio" name="expenseAccount" value="card" checked>
-            <span class="opt-icon">💳</span> С карты
+        <div class="account-toggle" id="expenseAccountToggle" style="flex-wrap:wrap">
+          <label class="account-option active" data-account="visa">
+            <input type="radio" name="expenseAccount" value="visa" checked>
+            <span class="opt-icon"><span class="brand-visa" style="font-size:0.55rem;padding:2px 5px">VISA</span></span>
+          </label>
+          <label class="account-option" data-account="mastercard">
+            <input type="radio" name="expenseAccount" value="mastercard">
+            <span class="opt-icon"><span class="brand-mc" style="width:28px;height:16px"><span class="mc-r" style="width:12px;height:12px"></span><span class="mc-y" style="width:12px;height:12px"></span></span></span>
           </label>
           <label class="account-option" data-account="cash">
             <input type="radio" name="expenseAccount" value="cash">
-            <span class="opt-icon">💵</span> С наличных
+            <span class="opt-icon">💵</span>
           </label>
         </div>
       </div>
@@ -1088,16 +1264,18 @@
     <div class="card">
       <div class="settings-section">
         <h3>Начальные остатки</h3>
-        <p class="text-sm text-muted mb-2">Стартовые суммы на карте и наличными (до учёта операций).</p>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Карта (Br)</label>
-            <input type="number" id="initialCard" placeholder="0" inputmode="decimal" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>Наличные (Br)</label>
-            <input type="number" id="initialCash" placeholder="0" inputmode="decimal" step="0.01">
-          </div>
+        <p class="text-sm text-muted mb-2">Стартовые суммы на счетах (до учёта операций).</p>
+        <div class="form-group">
+          <label>Visa (Br)</label>
+          <input type="number" id="initialVisa" placeholder="0" inputmode="decimal" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>MasterCard (Br)</label>
+          <input type="number" id="initialMastercard" placeholder="0" inputmode="decimal" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>Наличные (Br)</label>
+          <input type="number" id="initialCash" placeholder="0" inputmode="decimal" step="0.01">
         </div>
         <button class="btn btn-primary btn-sm" id="btnSaveInitial" style="width:100%">Сохранить остатки</button>
       </div>
@@ -1184,8 +1362,12 @@
         Укажите текущие остатки — это стартовая точка учёта.
       </p>
       <div class="form-group">
-        <label>💳 На карте (Br)</label>
-        <input type="number" id="setupCard" placeholder="0" inputmode="decimal" min="0" step="0.01">
+        <label>Карта Visa (Br)</label>
+        <input type="number" id="setupVisa" placeholder="0" inputmode="decimal" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Карта MasterCard (Br)</label>
+        <input type="number" id="setupMastercard" placeholder="0" inputmode="decimal" min="0" step="0.01">
       </div>
       <div class="form-group">
         <label>💵 Наличные (Br)</label>
@@ -1227,11 +1409,37 @@
       '#10B981', '#DC2626', '#D946EF', '#2563EB', '#7C3AED'
     ];
 
+    const ACCOUNTS = {
+      visa: { label: 'Карта Visa', short: 'Visa' },
+      mastercard: { label: 'Карта MasterCard', short: 'MasterCard' },
+      cash: { label: 'Наличные', short: 'Наличные' }
+    };
+
+    function normalizeAccount(acc) {
+      if (acc === 'card') return 'visa';
+      if (acc === 'visa' || acc === 'mastercard' || acc === 'cash') return acc;
+      return 'visa';
+    }
+
+    function accountLabel(acc) {
+      const a = normalizeAccount(acc);
+      return (ACCOUNTS[a] && ACCOUNTS[a].short) || a;
+    }
+
+    function accountEmoji(acc) {
+      const a = normalizeAccount(acc);
+      if (a === 'cash') return '💵';
+      if (a === 'mastercard') return '🟠';
+      return '🔵';
+    }
+
+    let expenseChartMeta = { rootIds: [], expenses: [] };
+
     let state = {
       categories: [],
       sources: [],
       transactions: [],
-      initialBalances: { card: 0, cash: 0 },
+      initialBalances: { visa: 0, mastercard: 0, cash: 0 },
       setupComplete: false,
       period: 'month',
       dateFrom: null,
@@ -1239,7 +1447,9 @@
       histType: 'all',
       histPeriod: 'month',
       histDateFrom: null,
-      histDateTo: null
+      histDateTo: null,
+      statsFilterCats: [],
+      statsFilterSources: []
     };
 
     let syncConfig = { binId: '', masterKey: '', lastSync: null };
@@ -1287,8 +1497,8 @@
       return (name || '').trim().toLowerCase().replace(/\s+/g, ' ');
     }
 
-    /** Общий цвет для одинаковых названий источника и категории */
-    function syncLinkedColors(name, color) {
+    /** Общий цвет для одинаковых названий — цвет берётся из расходов */
+    function syncLinkedColorsFromExpense(name, color) {
       if (!name || !color) return;
       const key = normalizeName(name);
       state.categories.forEach(c => {
@@ -1299,24 +1509,75 @@
       });
     }
 
-    /** При загрузке: выровнять цвета у уже совпадающих имён */
-    function alignLinkedEntityColors() {
-      const byName = {};
-      state.sources.forEach(s => {
-        const k = normalizeName(s.name);
-        if (!k) return;
-        if (!byName[k]) byName[k] = { color: s.color, name: s.name };
-      });
+    function applyParentColorsToSubs() {
       state.categories.forEach(c => {
-        const k = normalizeName(c.name);
-        if (!k) return;
-        if (byName[k]) {
-          // общий цвет: приоритет у уже совпавшего
-          const color = byName[k].color || c.color;
-          syncLinkedColors(c.name, color || '#8B5CF6');
-        } else {
-          byName[k] = { color: c.color, name: c.name };
+        if (c.parentId) {
+          const parent = getCategory(c.parentId);
+          if (parent) c.color = parent.color;
         }
+      });
+    }
+
+    function pickAlternateColor(excludeColors, preferNot) {
+      const excluded = new Set((excludeColors || []).map(c => (c || '').toLowerCase()));
+      if (preferNot) excluded.add(preferNot.toLowerCase());
+      for (const c of PRESET_COLORS) {
+        if (!excluded.has(c.toLowerCase())) return c;
+      }
+      return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0');
+    }
+
+    /** Назначить цвет категории расходов; подкатегории наследуют; конфликт → сдвиг занятого */
+    function applyExpenseCategoryColor(catId, newColor) {
+      const cat = getCategory(catId);
+      if (!cat) return [];
+      const target = cat.parentId ? getCategory(cat.parentId) : cat;
+      if (!target) return [];
+      const messages = [];
+      const usedByOthers = state.categories.filter(c =>
+        !c.parentId && c.id !== target.id && (c.color || '').toLowerCase() === (newColor || '').toLowerCase()
+      );
+      usedByOthers.forEach(other => {
+        const taken = state.categories.filter(c => !c.parentId).map(c => c.color);
+        const alt = pickAlternateColor(taken, newColor);
+        other.color = alt;
+        getSubcategories(other.id).forEach(s => { s.color = alt; });
+        syncLinkedColorsFromExpense(other.name, alt);
+        messages.push({ name: other.name, color: alt });
+      });
+      target.color = newColor;
+      getSubcategories(target.id).forEach(s => { s.color = newColor; });
+      if (cat.parentId) cat.color = newColor;
+      syncLinkedColorsFromExpense(target.name, newColor);
+      return messages;
+    }
+
+    function showColorChangeToasts(messages) {
+      messages.forEach((m, i) => {
+        setTimeout(() => {
+          toast(`Категория «${m.name}» сменила цвет на ▢`);
+          // richer toast with swatch via temporary DOM
+          const el = document.getElementById('toast');
+          el.innerHTML = `Категория «${m.name}» сменила цвет на <span class="color-toast-swatch" style="background:${m.color}"></span>`;
+          el.classList.add('show');
+          setTimeout(() => el.classList.remove('show'), 2800);
+        }, i * 900);
+      });
+    }
+
+    /** При загрузке: подкатегории от родителя; совпадения имён — цвет из расходов */
+    function alignLinkedEntityColors() {
+      applyParentColorsToSubs();
+      const expenseNames = {};
+      state.categories.forEach(c => {
+        if (c.parentId) return;
+        const k = normalizeName(c.name);
+        if (k) expenseNames[k] = c.color || '#8B5CF6';
+      });
+      Object.keys(expenseNames).forEach(k => {
+        const color = expenseNames[k];
+        const sample = state.categories.find(c => !c.parentId && normalizeName(c.name) === k);
+        if (sample) syncLinkedColorsFromExpense(sample.name, color);
       });
     }
 
@@ -1517,21 +1778,29 @@
           state.categories = data.categories || [...DEFAULT_CATEGORIES];
           state.sources = data.sources || [...DEFAULT_SOURCES];
           state.transactions = data.transactions || [];
-          state.initialBalances = data.initialBalances || { card: 0, cash: 0 };
+          state.initialBalances = data.initialBalances || { visa: 0, mastercard: 0, cash: 0 };
+          // migrate old card → visa
+          if (state.initialBalances.card != null && state.initialBalances.visa == null) {
+            state.initialBalances.visa = state.initialBalances.card || 0;
+          }
+          state.initialBalances.visa = state.initialBalances.visa || 0;
+          state.initialBalances.mastercard = state.initialBalances.mastercard || 0;
+          state.initialBalances.cash = state.initialBalances.cash || 0;
+          delete state.initialBalances.card;
+
           state.setupComplete = !!data.setupComplete;
-          // If already has data, treat as setup done
-          if (!state.setupComplete && (state.transactions.length > 0 || state.initialBalances.card || state.initialBalances.cash)) {
+          if (!state.setupComplete && (state.transactions.length > 0 || state.initialBalances.visa || state.initialBalances.mastercard || state.initialBalances.cash)) {
             state.setupComplete = true;
           }
-          // Migrate old transactions without account
           state.transactions.forEach(tx => {
-            if (!tx.account) tx.account = 'card';
+            if (tx.account) tx.account = normalizeAccount(tx.account);
+            else tx.account = 'visa';
+            if (tx.fromAccount) tx.fromAccount = normalizeAccount(tx.fromAccount);
+            if (tx.toAccount) tx.toAccount = normalizeAccount(tx.toAccount);
           });
-          // Migrate categories without parentId
           state.categories.forEach(c => {
             if (c.parentId === undefined) c.parentId = null;
           });
-          // Migrate sources without color
           const fallbackSrcColors = ['#16A34A', '#EC4899', '#8B5CF6', '#0D9488', '#F59E0B', '#3B82F6'];
           state.sources.forEach((s, i) => {
             if (!s.color) s.color = fallbackSrcColors[i % fallbackSrcColors.length];
@@ -1540,14 +1809,14 @@
           state.categories = [...DEFAULT_CATEGORIES];
           state.sources = [...DEFAULT_SOURCES];
           state.transactions = [];
-          state.initialBalances = { card: 0, cash: 0 };
+          state.initialBalances = { visa: 0, mastercard: 0, cash: 0 };
           state.setupComplete = false;
         }
       } catch (e) {
         state.categories = [...DEFAULT_CATEGORIES];
         state.sources = [...DEFAULT_SOURCES];
         state.transactions = [];
-        state.initialBalances = { card: 0, cash: 0 };
+        state.initialBalances = { visa: 0, mastercard: 0, cash: 0 };
         state.setupComplete = false;
       }
 
@@ -1657,7 +1926,21 @@
         if (data.transactions) state.transactions = data.transactions;
         if (data.initialBalances) state.initialBalances = data.initialBalances;
         if (data.setupComplete !== undefined) state.setupComplete = !!data.setupComplete;
-        state.transactions.forEach(tx => { if (!tx.account) tx.account = 'card'; });
+        state.transactions.forEach(tx => {
+          if (tx.account) tx.account = normalizeAccount(tx.account);
+          else tx.account = 'visa';
+          if (tx.fromAccount) tx.fromAccount = normalizeAccount(tx.fromAccount);
+          if (tx.toAccount) tx.toAccount = normalizeAccount(tx.toAccount);
+        });
+        if (state.initialBalances && state.initialBalances.card != null) {
+          state.initialBalances.visa = state.initialBalances.visa || state.initialBalances.card || 0;
+          delete state.initialBalances.card;
+        }
+        state.initialBalances = {
+          visa: (state.initialBalances && state.initialBalances.visa) || 0,
+          mastercard: (state.initialBalances && state.initialBalances.mastercard) || 0,
+          cash: (state.initialBalances && state.initialBalances.cash) || 0
+        };
         alignLinkedEntityColors();
 
         saveState(true);
@@ -1721,14 +2004,95 @@
       };
     }
 
+    function categoryMatchesFilter(categoryId) {
+      if (!state.statsFilterCats.length) return true;
+      if (state.statsFilterCats.includes(categoryId)) return true;
+      const root = getRootCategoryId(categoryId);
+      return state.statsFilterCats.includes(root);
+    }
+
     function filterTx(type) {
       const { from, to } = getDateRange();
       return state.transactions.filter(tx => {
         if (type && tx.type !== type) return false;
         if (from && tx.date < from) return false;
         if (to && tx.date > to) return false;
+        if (type === 'income' && state.statsFilterSources.length) {
+          if (!state.statsFilterSources.includes(tx.sourceId)) return false;
+        }
+        if (type === 'expense' && state.statsFilterCats.length) {
+          const splits = tx.splits || [];
+          if (!splits.some(sp => categoryMatchesFilter(sp.categoryId))) return false;
+        }
         return true;
       });
+    }
+
+    function getFilteredExpenseAmount(tx) {
+      const splits = tx.splits || [];
+      if (!state.statsFilterCats.length) return roundMoney(tx.amount);
+      return roundMoney(splits
+        .filter(sp => categoryMatchesFilter(sp.categoryId))
+        .reduce((s, sp) => s + (sp.amount || 0), 0));
+    }
+
+    /** Баланс счёта операции до и после этой записи */
+    function getBalanceAroundTx(txId) {
+      const target = state.transactions.find(t => t.id === txId);
+      if (!target) return null;
+      const acc = normalizeAccount(target.account || 'visa');
+      const ordered = state.transactions.slice().sort((a, b) =>
+        a.date.localeCompare(b.date) || a.id.localeCompare(b.id)
+      );
+      const bal = {
+        visa: roundMoney(state.initialBalances.visa),
+        mastercard: roundMoney(state.initialBalances.mastercard),
+        cash: roundMoney(state.initialBalances.cash)
+      };
+      const apply = (tx, sign) => {
+        const amount = roundMoney(tx.amount) * (sign || 1);
+        if (tx.type === 'transfer') {
+          const from = normalizeAccount(tx.fromAccount);
+          const to = normalizeAccount(tx.toAccount);
+          if (bal[from] != null) bal[from] = roundMoney(bal[from] - amount);
+          if (bal[to] != null) bal[to] = roundMoney(bal[to] + amount);
+          return;
+        }
+        const a = normalizeAccount(tx.account);
+        if (tx.type === 'income' && bal[a] != null) bal[a] = roundMoney(bal[a] + amount);
+        if (tx.type === 'expense' && bal[a] != null) bal[a] = roundMoney(bal[a] - amount);
+      };
+      for (const tx of ordered) {
+        if (tx.id === txId) {
+          const before = bal[acc];
+          apply(tx, 1);
+          const after = bal[acc];
+          return { account: acc, before, after };
+        }
+        apply(tx, 1);
+      }
+      return null;
+    }
+
+    function renderStatsFilters() {
+      const catBox = document.getElementById('filterCatChips');
+      const srcBox = document.getElementById('filterSrcChips');
+      if (!catBox || !srcBox) return;
+
+      const tops = getTopCategories();
+      catBox.innerHTML = tops.map(c => {
+        const active = state.statsFilterCats.includes(c.id) ? 'active' : '';
+        return `<button type="button" class="filter-chip ${active}" data-filter-cat="${c.id}">
+          <span class="legend-dot" style="background:${c.color};display:inline-block;margin-right:4px"></span>${c.name}
+        </button>`;
+      }).join('') || '<span class="text-muted text-sm">Нет категорий</span>';
+
+      srcBox.innerHTML = state.sources.map(s => {
+        const active = state.statsFilterSources.includes(s.id) ? 'active' : '';
+        return `<button type="button" class="filter-chip ${active}" data-filter-src="${s.id}">
+          <span class="legend-dot" style="background:${s.color || '#16A34A'};display:inline-block;margin-right:4px"></span>${s.name}
+        </button>`;
+      }).join('') || '<span class="text-muted text-sm">Нет источников</span>';
     }
 
     // ========== ACCOUNT BALANCES ==========
@@ -1737,51 +2101,49 @@
     }
 
     function getAccountBalances() {
-      let card = roundMoney(state.initialBalances.card);
-      let cash = roundMoney(state.initialBalances.cash);
+      const bal = {
+        visa: roundMoney(state.initialBalances.visa),
+        mastercard: roundMoney(state.initialBalances.mastercard),
+        cash: roundMoney(state.initialBalances.cash)
+      };
       state.transactions.forEach(tx => {
         const amount = roundMoney(tx.amount);
         if (tx.type === 'transfer') {
-          if (tx.fromAccount === 'card') {
-            card = roundMoney(card - amount);
-            cash = roundMoney(cash + amount);
-          } else {
-            cash = roundMoney(cash - amount);
-            card = roundMoney(card + amount);
-          }
+          const from = normalizeAccount(tx.fromAccount);
+          const to = normalizeAccount(tx.toAccount);
+          if (bal[from] != null) bal[from] = roundMoney(bal[from] - amount);
+          if (bal[to] != null) bal[to] = roundMoney(bal[to] + amount);
           return;
         }
-        const acc = tx.account || 'card';
+        const acc = normalizeAccount(tx.account);
         if (tx.type === 'income') {
-          if (acc === 'card') card = roundMoney(card + amount);
-          else cash = roundMoney(cash + amount);
+          if (bal[acc] != null) bal[acc] = roundMoney(bal[acc] + amount);
         } else if (tx.type === 'expense') {
-          if (acc === 'card') card = roundMoney(card - amount);
-          else cash = roundMoney(cash - amount);
+          if (bal[acc] != null) bal[acc] = roundMoney(bal[acc] - amount);
         }
       });
-      return { card, cash };
+      return bal;
     }
 
     function renderAccountBalances() {
-      const { card, cash } = getAccountBalances();
-      const elCard = document.getElementById('balCard');
-      const elCash = document.getElementById('balCash');
-      if (elCard) {
-        elCard.textContent = formatMoney(card);
-        elCard.classList.toggle('negative', card < 0);
-      }
-      if (elCash) {
-        elCash.textContent = formatMoney(cash);
-        elCash.classList.toggle('negative', cash < 0);
-      }
+      const bal = getAccountBalances();
+      const map = { balVisa: 'visa', balMastercard: 'mastercard', balCash: 'cash' };
+      Object.entries(map).forEach(([elId, key]) => {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.textContent = formatMoney(bal[key]);
+        el.classList.toggle('negative', bal[key] < 0);
+      });
 
-      const total = roundMoney(card + cash);
+      const total = roundMoney(bal.visa + bal.mastercard + bal.cash);
       const hint = document.getElementById('balTotalHint');
       if (hint) hint.textContent = `Всего на руках: ${formatMoney(total)}`;
 
-      // Сверка: стартовые + все доходы − все расходы = карта + наличные
-      const init = roundMoney((state.initialBalances.card || 0) + (state.initialBalances.cash || 0));
+      const init = roundMoney(
+        (state.initialBalances.visa || 0) +
+        (state.initialBalances.mastercard || 0) +
+        (state.initialBalances.cash || 0)
+      );
       let allInc = 0, allExp = 0;
       state.transactions.forEach(tx => {
         if (tx.type === 'income') allInc = roundMoney(allInc + tx.amount);
@@ -1794,7 +2156,7 @@
           check.textContent = `Сверка OK: старт ${formatMoney(init)} + доходы − расходы = ${formatMoney(expected)}`;
           check.style.color = 'var(--income)';
         } else {
-          check.textContent = `Расхождение сверки: ожидали ${formatMoney(expected)}, на счетах ${formatMoney(total)}. Проверьте счёт (карта/наличные) у операций.`;
+          check.textContent = `Расхождение сверки: ожидали ${formatMoney(expected)}, на счетах ${formatMoney(total)}. Проверьте счёт операции.`;
           check.style.color = 'var(--expense)';
         }
       }
@@ -1803,12 +2165,13 @@
     // ========== RENDER STATS ==========
     function renderStats() {
       renderAccountBalances();
+      renderStatsFilters();
 
       const incomes = filterTx('income');
       const expenses = filterTx('expense');
 
       const totalIncome = incomes.reduce((s, t) => s + t.amount, 0);
-      const totalExpense = expenses.reduce((s, t) => s + t.amount, 0);
+      const totalExpense = expenses.reduce((s, t) => s + getFilteredExpenseAmount(t), 0);
       const balance = totalIncome - totalExpense;
 
       document.getElementById('sumIncome').textContent = formatMoney(totalIncome);
@@ -1818,10 +2181,11 @@
 
       renderLinkedAnalysis(incomes, expenses);
 
-      // Expense by category (aggregate to top-level)
+      // Expense by category (aggregate to top-level, respect filter)
       const expByCat = {};
       expenses.forEach(tx => {
         (tx.splits || []).forEach(sp => {
+          if (!categoryMatchesFilter(sp.categoryId)) return;
           const rootId = getRootCategoryId(sp.categoryId);
           expByCat[rootId] = (expByCat[rootId] || 0) + sp.amount;
         });
@@ -1830,27 +2194,33 @@
       const expLabels = [];
       const expData = [];
       const expColors = [];
+      const expRootIds = [];
       Object.entries(expByCat).forEach(([catId, sum]) => {
         const cat = getCategory(catId);
         if (cat && sum > 0) {
           expLabels.push(cat.name);
           expData.push(sum);
           expColors.push(cat.color);
+          expRootIds.push(catId);
         }
       });
+      expenseChartMeta = { rootIds: expRootIds, expenses };
 
       const expEmpty = document.getElementById('expenseEmpty');
       const expCanvas = document.getElementById('expenseChart');
+      const subDetail = document.getElementById('expenseSubDetail');
       if (expData.length === 0) {
         expEmpty.classList.remove('hidden');
         expCanvas.style.display = 'none';
         if (expenseChart) { expenseChart.destroy(); expenseChart = null; }
         document.getElementById('expenseLegend').innerHTML = '';
+        if (subDetail) { subDetail.classList.add('hidden'); subDetail.innerHTML = ''; }
       } else {
         expEmpty.classList.add('hidden');
         expCanvas.style.display = 'block';
         renderPie('expenseChart', expLabels, expData, expColors, 'expense');
-        renderLegend('expenseLegend', expLabels, expData, expColors);
+        renderExpenseLines('expenseLegend', expLabels, expData, expColors, expRootIds, expenses);
+        if (subDetail) { subDetail.classList.add('hidden'); subDetail.innerHTML = ''; }
       }
 
       // Income by source
@@ -1907,6 +2277,12 @@
           responsive: true,
           maintainAspectRatio: false,
           cutout: '58%',
+          onClick: type === 'expense' ? (evt, elements) => {
+            if (!elements.length) return;
+            const idx = elements[0].index;
+            const rootId = expenseChartMeta.rootIds[idx];
+            if (rootId) showExpenseSubDetail(rootId);
+          } : undefined,
           plugins: {
             legend: { display: false },
             tooltip: {
@@ -1929,6 +2305,7 @@
     function renderLegend(containerId, labels, data, colors) {
       const total = data.reduce((a, b) => a + b, 0);
       const el = document.getElementById(containerId);
+      if (!el) return;
       el.innerHTML = labels.map((l, i) => {
         const pct = total ? Math.round(data[i] / total * 100) : 0;
         return `<div class="legend-item">
@@ -1936,6 +2313,55 @@
           ${l}: ${formatMoney(data[i])} (${pct}%)
         </div>`;
       }).join('');
+    }
+
+    function renderExpenseLines(containerId, labels, data, colors, rootIds, expenses) {
+      const total = data.reduce((a, b) => a + b, 0);
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.innerHTML = labels.map((l, i) => {
+        const pct = total ? Math.round(data[i] / total * 100) : 0;
+        return `<div class="expense-line" data-root="${rootIds[i]}" style="cursor:pointer">
+          <span class="el-name"><span class="legend-dot" style="background:${colors[i]};display:inline-block;margin-right:6px"></span>${l}</span>
+          <span class="el-sum">${formatMoney(data[i])} · ${pct}%</span>
+        </div>`;
+      }).join('');
+      el.querySelectorAll('.expense-line').forEach(row => {
+        row.addEventListener('click', () => showExpenseSubDetail(row.dataset.root));
+      });
+    }
+
+    function showExpenseSubDetail(rootId) {
+      const box = document.getElementById('expenseSubDetail');
+      if (!box) return;
+      const root = getCategory(rootId);
+      if (!root) return;
+      const expenses = expenseChartMeta.expenses || [];
+      const byLeaf = {};
+      expenses.forEach(tx => {
+        (tx.splits || []).forEach(sp => {
+          if (getRootCategoryId(sp.categoryId) !== rootId) return;
+          byLeaf[sp.categoryId] = (byLeaf[sp.categoryId] || 0) + sp.amount;
+        });
+      });
+      const entries = Object.entries(byLeaf).filter(([, v]) => v > 0);
+      const total = entries.reduce((s, [, v]) => s + v, 0);
+      let html = `<h4>${root.name} — разбивка по подкатегориям</h4>`;
+      if (entries.length === 0) {
+        html += `<div class="text-muted">Нет данных</div>`;
+      } else {
+        entries.sort((a, b) => b[1] - a[1]).forEach(([id, sum]) => {
+          const cat = getCategory(id);
+          const name = cat && cat.parentId ? cat.name : (cat ? cat.name + ' (общее)' : '—');
+          const pct = total ? Math.round(sum / total * 100) : 0;
+          html += `<div class="expense-line">
+            <span class="el-name"><span class="legend-dot" style="background:${root.color};display:inline-block;margin-right:6px"></span>${name}</span>
+            <span class="el-sum">${formatMoney(sum)} · ${pct}%</span>
+          </div>`;
+        });
+      }
+      box.innerHTML = html;
+      box.classList.remove('hidden');
     }
 
     // ========== RENDER LISTS ==========
@@ -1955,17 +2381,41 @@
       empty.classList.add('hidden');
       list.innerHTML = items.map(tx => {
         const src = state.sources.find(s => s.id === tx.sourceId);
-        const accIcon = (tx.account || 'card') === 'cash' ? '💵' : '💳';
+        const accIcon = accountEmoji(tx.account);
         return `<div class="tx-item">
           <div class="tx-icon income">↑</div>
           <div class="tx-info">
             <div class="tx-title">${src ? src.name : '—'}${tx.note ? ' · ' + tx.note : ''}</div>
-            <div class="tx-meta">${formatDate(tx.date)} · ${accIcon}</div>
+            <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}</div>
           </div>
           <div class="tx-amount income">+${formatMoney(tx.amount)}</div>
           <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
         </div>`;
       }).join('');
+    }
+
+    function buildExpenseDetailHtml(tx) {
+      const around = getBalanceAroundTx(tx.id);
+      const splits = tx.splits || [];
+      let splitsHtml = '';
+      if (splits.length > 1) {
+        splitsHtml = `<div class="d-split">` + splits.map(sp =>
+          `<div class="d-row"><span>${getCategoryLabel(sp.categoryId)}</span><strong>−${formatMoney(sp.amount)}</strong></div>`
+        ).join('') + `</div>`;
+      } else if (splits.length === 1) {
+        splitsHtml = `<div class="d-row"><span>Категория</span><strong>${getCategoryLabel(splits[0].categoryId)}</strong></div>`;
+      }
+      const before = around ? formatMoney(around.before) : '—';
+      const after = around ? formatMoney(around.after) : '—';
+      const acc = around ? accountLabel(around.account) : accountLabel(tx.account);
+      return `
+        <div class="d-row"><span>Счёт</span><strong>${acc}</strong></div>
+        <div class="d-row"><span>Баланс до</span><strong>${before}</strong></div>
+        <div class="d-row"><span>Сумма</span><strong class="expense">−${formatMoney(tx.amount)}</strong></div>
+        ${splitsHtml}
+        <div class="d-row"><span>Остаток после</span><strong>${after}</strong></div>
+        <div class="d-row"><span>Заметка</span><strong>${tx.note ? tx.note : '—'}</strong></div>
+      `;
     }
 
     function renderExpenseList() {
@@ -1984,16 +2434,19 @@
       empty.classList.add('hidden');
       list.innerHTML = items.map(tx => {
         const splitsText = (tx.splits || []).map(sp => getCategoryLabel(sp.categoryId)).join(', ');
-        const accIcon = (tx.account || 'card') === 'cash' ? '💵' : '💳';
-        return `<div class="tx-item">
-          <div class="tx-icon expense">↓</div>
-          <div class="tx-info">
-            <div class="tx-title">${splitsText}${tx.note ? ' · ' + tx.note : ''}</div>
-            <div class="tx-meta">${formatDate(tx.date)} · ${accIcon}</div>
+        const accIcon = accountEmoji(tx.account);
+        return `<div class="tx-wrap" data-tx-id="${tx.id}">
+          <div class="tx-item clickable" data-expand-id="${tx.id}">
+            <div class="tx-icon expense">↓</div>
+            <div class="tx-info">
+              <div class="tx-title">${splitsText}${tx.note ? ' · ' + tx.note : ''}</div>
+              <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}</div>
+            </div>
+            <div class="tx-amount expense">−${formatMoney(tx.amount)}</div>
+            <button class="tx-edit" data-id="${tx.id}" title="Изменить">✎</button>
+            <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
           </div>
-          <div class="tx-amount expense">−${formatMoney(tx.amount)}</div>
-          <button class="tx-edit" data-id="${tx.id}" title="Изменить">✎</button>
-          <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
+          <div class="tx-detail" id="exp-detail-${tx.id}">${buildExpenseDetailHtml(tx)}</div>
         </div>`;
       }).join('');
     }
@@ -2046,21 +2499,19 @@
       empty.classList.add('hidden');
       list.innerHTML = items.map(tx => {
         if (tx.type === 'transfer') {
-          const fromIcon = tx.fromAccount === 'cash' ? '💵' : '💳';
-          const toIcon = tx.fromAccount === 'cash' ? '💳' : '💵';
-          const dirLabel = tx.fromAccount === 'card' ? 'Карта → наличные' : 'Наличные → карта';
+          const dirLabel = `${accountLabel(tx.fromAccount)} → ${accountLabel(tx.toAccount)}`;
           const title = dirLabel + (tx.note ? ' · ' + tx.note : '');
           return `<div class="tx-item">
             <div class="tx-icon" style="background:#E0E7FF">⇄</div>
             <div class="tx-info">
               <div class="tx-title">${title}</div>
-              <div class="tx-meta">${formatDate(tx.date)} · ${fromIcon}→${toIcon}</div>
+              <div class="tx-meta">${formatDate(tx.date)} · ${accountEmoji(tx.fromAccount)}→${accountEmoji(tx.toAccount)}</div>
             </div>
             <div class="tx-amount" style="color:#4F46E5">${formatMoney(tx.amount)}</div>
             <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
           </div>`;
         }
-        const accIcon = (tx.account || 'card') === 'cash' ? '💵' : '💳';
+        const accIcon = accountEmoji(tx.account);
         if (tx.type === 'income') {
           const src = state.sources.find(s => s.id === tx.sourceId);
           const title = (src ? src.name : '—') + (tx.note ? ' · ' + tx.note : '');
@@ -2068,7 +2519,7 @@
             <div class="tx-icon income">↑</div>
             <div class="tx-info">
               <div class="tx-title">${title}</div>
-              <div class="tx-meta">${formatDate(tx.date)} · ${accIcon}${tx.note ? ' · 📝' : ''}</div>
+              <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}${tx.note ? ' · 📝' : ''}</div>
             </div>
             <div class="tx-amount income">+${formatMoney(tx.amount)}</div>
             <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
@@ -2082,7 +2533,7 @@
             <div class="tx-icon expense">↓</div>
             <div class="tx-info">
               <div class="tx-title">${title}</div>
-              <div class="tx-meta">${formatDate(tx.date)} · ${accIcon}${tx.note ? ' · 📝' : ''}</div>
+              <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}${tx.note ? ' · 📝' : ''}</div>
             </div>
             <div class="tx-amount expense">−${formatMoney(tx.amount)}</div>
             <button class="tx-edit" data-id="${tx.id}" title="Изменить">✎</button>
@@ -2242,7 +2693,7 @@
     }
 
     function setExpenseAccountUI(account) {
-      const acc = account === 'cash' ? 'cash' : 'card';
+      const acc = normalizeAccount(account);
       document.querySelectorAll('#expenseAccountToggle .account-option').forEach(opt => {
         const isActive = opt.dataset.account === acc;
         opt.classList.toggle('active', isActive);
@@ -2259,7 +2710,7 @@
       document.getElementById('expenseAmount').value = '';
       document.getElementById('expenseNote').value = '';
       document.getElementById('expenseDate').value = today();
-      setExpenseAccountUI('card');
+      setExpenseAccountUI('visa');
       document.getElementById('splitsList').innerHTML = '';
       addSplitRow();
       updateRemaining();
@@ -2277,7 +2728,7 @@
       document.getElementById('expenseAmount').value = tx.amount;
       document.getElementById('expenseDate').value = tx.date;
       document.getElementById('expenseNote').value = tx.note || '';
-      setExpenseAccountUI(tx.account || 'card');
+      setExpenseAccountUI(tx.account || 'visa');
 
       document.getElementById('splitsList').innerHTML = '';
       const splits = tx.splits && tx.splits.length ? tx.splits : [{ categoryId: '', amount: tx.amount }];
@@ -2369,10 +2820,18 @@
             renderCategories();
             renderSources();
             updateSyncUI(syncConfig.binId ? 'ok' : 'local');
-            document.getElementById('initialCard').value = state.initialBalances.card || '';
+            document.getElementById('initialVisa').value = state.initialBalances.visa || '';
+            document.getElementById('initialMastercard').value = state.initialBalances.mastercard || '';
             document.getElementById('initialCash').value = state.initialBalances.cash || '';
           }
         });
+      });
+
+      document.getElementById('btnClearFilters').addEventListener('click', () => {
+        state.statsFilterCats = [];
+        state.statsFilterSources = [];
+        renderStats();
+        toast('Фильтры сброшены');
       });
 
       // Period
@@ -2447,18 +2906,18 @@
 
       // Transfer between accounts
       document.getElementById('btnTransfer').addEventListener('click', () => {
-        const amount = parseFloat(document.getElementById('transferAmount').value);
+        const amount = roundMoney(document.getElementById('transferAmount').value);
         const date = document.getElementById('transferDate').value;
         const note = document.getElementById('transferNote').value.trim();
-        const dir = document.querySelector('input[name="transferDir"]:checked')?.value || 'card_to_cash';
+        const fromAccount = normalizeAccount(document.getElementById('transferFrom').value);
+        const toAccount = normalizeAccount(document.getElementById('transferTo').value);
 
         if (!amount || amount <= 0) return toast('Введите сумму');
         if (!date) return toast('Укажите дату');
+        if (fromAccount === toAccount) return toast('Выберите разные счета');
 
-        const fromAccount = dir === 'card_to_cash' ? 'card' : 'cash';
-        const toAccount = dir === 'card_to_cash' ? 'cash' : 'card';
         const balances = getAccountBalances();
-        const available = fromAccount === 'card' ? balances.card : balances.cash;
+        const available = balances[fromAccount] || 0;
         if (amount > available + 0.001) {
           return toast('Недостаточно средств на счёте');
         }
@@ -2477,12 +2936,13 @@
         document.getElementById('transferNote').value = '';
         renderAccountBalances();
         renderHistory();
-        toast(fromAccount === 'card' ? 'Переведено на наличные' : 'Переведено на карту');
+        toast(`Переведено: ${accountLabel(fromAccount)} → ${accountLabel(toAccount)}`);
       });
 
       // Save initial balances
       document.getElementById('btnSaveInitial').addEventListener('click', () => {
-        state.initialBalances.card = parseFloat(document.getElementById('initialCard').value) || 0;
+        state.initialBalances.visa = parseFloat(document.getElementById('initialVisa').value) || 0;
+        state.initialBalances.mastercard = parseFloat(document.getElementById('initialMastercard').value) || 0;
         state.initialBalances.cash = parseFloat(document.getElementById('initialCash').value) || 0;
         state.setupComplete = true;
         saveState();
@@ -2492,7 +2952,8 @@
 
       // Startup setup
       document.getElementById('btnSetupStart').addEventListener('click', () => {
-        state.initialBalances.card = parseFloat(document.getElementById('setupCard').value) || 0;
+        state.initialBalances.visa = parseFloat(document.getElementById('setupVisa').value) || 0;
+        state.initialBalances.mastercard = parseFloat(document.getElementById('setupMastercard').value) || 0;
         state.initialBalances.cash = parseFloat(document.getElementById('setupCash').value) || 0;
         state.setupComplete = true;
         saveState();
@@ -2501,7 +2962,7 @@
         toast('Стартовые остатки сохранены');
       });
       document.getElementById('btnSetupSkip').addEventListener('click', () => {
-        state.initialBalances = { card: 0, cash: 0 };
+        state.initialBalances = { visa: 0, mastercard: 0, cash: 0 };
         state.setupComplete = true;
         saveState();
         hideSetup();
@@ -2514,7 +2975,7 @@
         const date = document.getElementById('incomeDate').value;
         const sourceId = document.getElementById('incomeSource').value;
         const note = document.getElementById('incomeNote').value.trim();
-        const account = document.querySelector('input[name="incomeAccount"]:checked')?.value || 'card';
+        const account = normalizeAccount(document.querySelector('input[name="incomeAccount"]:checked')?.value || 'visa');
 
         if (!amount || amount <= 0) return toast('Введите сумму');
         if (!date) return toast('Укажите дату');
@@ -2550,7 +3011,7 @@
         const date = document.getElementById('expenseDate').value;
         const note = document.getElementById('expenseNote').value.trim();
         const splits = getSplits();
-        const account = document.querySelector('input[name="expenseAccount"]:checked')?.value || 'card';
+        const account = normalizeAccount(document.querySelector('input[name="expenseAccount"]:checked')?.value || 'visa');
 
         if (!amount || amount <= 0) return toast('Введите общую сумму');
         if (!date) return toast('Укажите дату');
@@ -2601,14 +3062,16 @@
         toast('Редактирование отменено');
       });
 
-      // Delete / edit transactions (delegated)
+      // Delete / edit / expand transactions (delegated)
       document.addEventListener('click', e => {
-        if (e.target.classList.contains('tx-edit')) {
-          startEditExpense(e.target.dataset.id);
+        if (e.target.classList.contains('tx-edit') || e.target.closest('.tx-edit')) {
+          const btn = e.target.classList.contains('tx-edit') ? e.target : e.target.closest('.tx-edit');
+          startEditExpense(btn.dataset.id);
           return;
         }
-        if (e.target.classList.contains('tx-delete')) {
-          const id = e.target.dataset.id;
+        if (e.target.classList.contains('tx-delete') || e.target.closest('.tx-delete')) {
+          const btn = e.target.classList.contains('tx-delete') ? e.target : e.target.closest('.tx-delete');
+          const id = btn.dataset.id;
           if (confirm('Удалить эту запись?')) {
             state.transactions = state.transactions.filter(t => t.id !== id);
             if (editingExpenseId === id) resetExpenseForm();
@@ -2619,6 +3082,30 @@
             renderStats();
             toast('Удалено');
           }
+          return;
+        }
+        const expandRow = e.target.closest('[data-expand-id]');
+        if (expandRow && !e.target.closest('.tx-edit') && !e.target.closest('.tx-delete')) {
+          const id = expandRow.dataset.expandId;
+          const detail = document.getElementById('exp-detail-' + id);
+          if (detail) detail.classList.toggle('open');
+          return;
+        }
+        if (e.target.closest('[data-filter-cat]')) {
+          const id = e.target.closest('[data-filter-cat]').dataset.filterCat;
+          const i = state.statsFilterCats.indexOf(id);
+          if (i >= 0) state.statsFilterCats.splice(i, 1);
+          else state.statsFilterCats.push(id);
+          renderStats();
+          return;
+        }
+        if (e.target.closest('[data-filter-src]')) {
+          const id = e.target.closest('[data-filter-src]').dataset.filterSrc;
+          const i = state.statsFilterSources.indexOf(id);
+          if (i >= 0) state.statsFilterSources.splice(i, 1);
+          else state.statsFilterSources.push(id);
+          renderStats();
+          return;
         }
         if (e.target.classList.contains('edit-cat')) {
           openModal('edit-category', e.target.dataset.id);
@@ -2683,43 +3170,56 @@
         const name = document.getElementById('modalName').value.trim();
         if (!name) return toast('Введите название');
 
+        let colorMsgs = [];
         if (modalMode === 'category') {
-          state.categories.push({ id: uid(), name, color: selectedColor, parentId: null });
-          syncLinkedColors(name, selectedColor);
+          const id = uid();
+          state.categories.push({ id, name, color: selectedColor, parentId: null });
+          colorMsgs = applyExpenseCategoryColor(id, selectedColor);
         } else if (modalMode === 'subcategory') {
           const parent = getCategory(parentForSub);
-          const color = selectedColor || (parent ? parent.color : PRESET_COLORS[0]);
+          const color = parent ? parent.color : (selectedColor || PRESET_COLORS[0]);
           state.categories.push({
             id: uid(),
             name,
             color,
             parentId: parentForSub
           });
-          syncLinkedColors(name, color);
+          // подкатегория всегда цвет родителя; совпадение имени с доходом — цвет расхода
+          syncLinkedColorsFromExpense(name, color);
         } else if (modalMode === 'edit-category') {
           const cat = getCategory(editingId);
           if (cat) {
             cat.name = name;
-            cat.color = selectedColor;
-            syncLinkedColors(name, selectedColor);
+            if (cat.parentId) {
+              const parent = getCategory(cat.parentId);
+              cat.color = parent ? parent.color : selectedColor;
+              syncLinkedColorsFromExpense(name, cat.color);
+            } else {
+              colorMsgs = applyExpenseCategoryColor(cat.id, selectedColor);
+            }
           }
         } else if (modalMode === 'source') {
-          state.sources.push({ id: uid(), name, color: selectedColor });
-          syncLinkedColors(name, selectedColor);
+          // цвет из совпадающей категории расходов, если есть
+          const matchCat = state.categories.find(c => !c.parentId && normalizeName(c.name) === normalizeName(name));
+          const color = matchCat ? matchCat.color : selectedColor;
+          state.sources.push({ id: uid(), name, color });
         } else if (modalMode === 'edit-source') {
           const src = state.sources.find(s => s.id === editingId);
           if (src) {
             src.name = name;
-            src.color = selectedColor;
-            syncLinkedColors(name, selectedColor);
+            const matchCat = state.categories.find(c => !c.parentId && normalizeName(c.name) === normalizeName(name));
+            if (matchCat) src.color = matchCat.color;
+            else src.color = selectedColor;
           }
         }
+        applyParentColorsToSubs();
         saveState();
         closeModal();
         renderCategories();
         renderSources();
         fillSourceSelect();
         refreshSplitCategorySelects();
+        if (colorMsgs.length) showColorChangeToasts(colorMsgs);
         renderStats();
         toast('Сохранено');
       });
@@ -2786,7 +3286,21 @@
             if (data.transactions) state.transactions = data.transactions;
             if (data.initialBalances) state.initialBalances = data.initialBalances;
             if (data.setupComplete !== undefined) state.setupComplete = !!data.setupComplete;
-            state.transactions.forEach(tx => { if (!tx.account) tx.account = 'card'; });
+            state.transactions.forEach(tx => {
+              if (tx.account) tx.account = normalizeAccount(tx.account);
+              else tx.account = 'visa';
+              if (tx.fromAccount) tx.fromAccount = normalizeAccount(tx.fromAccount);
+              if (tx.toAccount) tx.toAccount = normalizeAccount(tx.toAccount);
+            });
+            if (state.initialBalances && state.initialBalances.card != null) {
+              state.initialBalances.visa = state.initialBalances.visa || state.initialBalances.card || 0;
+              delete state.initialBalances.card;
+            }
+            state.initialBalances = {
+              visa: (state.initialBalances && state.initialBalances.visa) || 0,
+              mastercard: (state.initialBalances && state.initialBalances.mastercard) || 0,
+              cash: (state.initialBalances && state.initialBalances.cash) || 0
+            };
             alignLinkedEntityColors();
             saveState();
             renderAll();
@@ -2804,7 +3318,7 @@
           state.transactions = [];
           state.categories = [...DEFAULT_CATEGORIES];
           state.sources = [...DEFAULT_SOURCES];
-          state.initialBalances = { card: 0, cash: 0 };
+          state.initialBalances = { visa: 0, mastercard: 0, cash: 0 };
           state.setupComplete = false;
           saveState();
           renderAll();
@@ -2828,7 +3342,8 @@
     function showSetupIfNeeded() {
       const el = document.getElementById('setupOverlay');
       if (!state.setupComplete) {
-        document.getElementById('setupCard').value = state.initialBalances.card || '';
+        document.getElementById('setupVisa').value = state.initialBalances.visa || '';
+        document.getElementById('setupMastercard').value = state.initialBalances.mastercard || '';
         document.getElementById('setupCash').value = state.initialBalances.cash || '';
         el.classList.add('show');
       } else {
