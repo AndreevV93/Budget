@@ -853,8 +853,63 @@
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
     }
     .expense-line .el-sum { font-weight: 600; white-space: nowrap; }
+    .expense-line .chev {
+      display: inline-block;
+      width: 1em;
+      color: var(--text-secondary);
+      transition: transform 0.15s;
+      flex-shrink: 0;
+    }
+    .expense-line.open .chev { transform: rotate(90deg); }
+    .exp-cat-block { border-bottom: 1px solid var(--border); }
+    .exp-cat-block:last-child { border-bottom: none; }
+    .exp-sub-list {
+      display: none;
+      padding: 0 0 6px 18px;
+      background: #F8FAFC;
+      border-radius: 0 0 8px 8px;
+    }
+    .exp-sub-list.open { display: block; }
+    .exp-sub-list .expense-line {
+      border-bottom: none;
+      padding: 4px 0;
+      font-size: 0.82rem;
+      cursor: default;
+    }
+
+    .collapsible-head {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      user-select: none;
+    }
+    .collapsible-head .collapse-chev {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      transition: transform 0.15s;
+    }
+    .collapsible-card.collapsed .collapse-chev {
+      transform: rotate(-90deg);
+    }
+    .collapsible-card.collapsed .collapsible-body {
+      display: none;
+    }
+    .collapse-toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .collapse-toolbar .btn {
+      flex: 1;
+      padding: 8px;
+      font-size: 0.8rem;
+    }
 
     .tx-item.clickable { cursor: pointer; }
     .tx-item.clickable:hover { background: #F8FAFC; border-radius: 12px; }
@@ -995,41 +1050,43 @@
       </div>
       <div class="text-sm text-muted text-center" style="margin-top:4px;font-size:0.75rem" id="balCheckHint"></div>
 
-      <div class="card" style="margin-top:12px;margin-bottom:0">
-        <div class="card-title">Перевод между счетами</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Откуда</label>
-            <select id="transferFrom">
-              <option value="visa">Visa</option>
-              <option value="mastercard">MasterCard</option>
-              <option value="cash">Наличные</option>
-            </select>
+      <div class="card collapsible-card" style="margin-top:12px;margin-bottom:0" data-collapse-key="transfer">
+        <div class="card-title collapsible-head">Перевод между счетами <span class="collapse-chev">▼</span></div>
+        <div class="collapsible-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Откуда</label>
+              <select id="transferFrom">
+                <option value="visa">Visa</option>
+                <option value="mastercard">MasterCard</option>
+                <option value="cash">Наличные</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Куда</label>
+              <select id="transferTo">
+                <option value="cash">Наличные</option>
+                <option value="visa">Visa</option>
+                <option value="mastercard">MasterCard</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Сумма (Br)</label>
+              <input type="number" id="transferAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+            </div>
+            <div class="form-group">
+              <label>📅 Дата</label>
+              <input type="date" id="transferDate">
+            </div>
           </div>
           <div class="form-group">
-            <label>Куда</label>
-            <select id="transferTo">
-              <option value="cash">Наличные</option>
-              <option value="visa">Visa</option>
-              <option value="mastercard">MasterCard</option>
-            </select>
+            <label>Заметка (необязательно)</label>
+            <input type="text" id="transferNote" placeholder="Например: снял в банкомате">
           </div>
+          <button class="btn btn-primary" id="btnTransfer">Перевести</button>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Сумма (Br)</label>
-            <input type="number" id="transferAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>📅 Дата</label>
-            <input type="date" id="transferDate">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Заметка (необязательно)</label>
-          <input type="text" id="transferNote" placeholder="Например: снял в банкомате">
-        </div>
-        <button class="btn btn-primary" id="btnTransfer">Перевести</button>
       </div>
     </div>
 
@@ -1043,14 +1100,16 @@
       <input type="date" id="dateTo">
     </div>
 
-    <div class="card" style="margin-bottom:12px;padding:12px 14px">
-      <div class="card-title" style="margin-bottom:4px">Фильтр операций</div>
-      <p class="text-sm text-muted mb-2">Выберите одну или несколько категорий/источников. Пустой фильтр = все.</p>
-      <div class="filter-section-title">Расходы (категории)</div>
-      <div class="filter-chips" id="filterCatChips"></div>
-      <div class="filter-section-title">Доходы (источники)</div>
-      <div class="filter-chips" id="filterSrcChips"></div>
-      <button class="btn btn-ghost btn-sm" id="btnClearFilters" style="width:100%;margin-top:6px">Сбросить фильтры</button>
+    <div class="card collapsible-card" style="margin-bottom:12px;padding:12px 14px" data-collapse-key="filters">
+      <div class="card-title collapsible-head" style="margin-bottom:4px">Фильтр операций <span class="collapse-chev">▼</span></div>
+      <div class="collapsible-body">
+        <p class="text-sm text-muted mb-2">Выберите одну или несколько категорий/источников. Пустой фильтр = все.</p>
+        <div class="filter-section-title">Расходы (категории)</div>
+        <div class="filter-chips" id="filterCatChips"></div>
+        <div class="filter-section-title">Доходы (источники)</div>
+        <div class="filter-chips" id="filterSrcChips"></div>
+        <button class="btn btn-ghost btn-sm" id="btnClearFilters" style="width:100%;margin-top:6px">Сбросить фильтры</button>
+      </div>
     </div>
 
     <div class="summary-grid">
@@ -1071,34 +1130,45 @@
       «За период» = доходы − расходы за выбранные даты (без стартовых остатков). Visa / MasterCard / наличные — остаток на сейчас.
     </p>
 
-    <div class="card" id="linkedAnalysisCard">
-      <div class="card-title">Одинаковые имена: приход − расход</div>
-      <p class="text-sm text-muted mb-2">Если источник дохода и категория расхода называются одинаково (например «Мама»), цвет общий, а здесь — разница за период.</p>
-      <div id="linkedAnalysisList"></div>
-      <div class="empty-state hidden" id="linkedAnalysisEmpty">Нет совпадений имён или операций за период</div>
+    <div class="collapse-toolbar">
+      <button type="button" class="btn btn-ghost" id="btnCollapseAll">Свернуть разделы</button>
+      <button type="button" class="btn btn-ghost" id="btnExpandAll">Развернуть разделы</button>
     </div>
 
-    <div class="card">
-      <div class="card-title">Расходы по категориям</div>
-      <p class="text-sm text-muted mb-2">Нажмите на сегмент — увидите подкатегории</p>
-      <div class="chart-container">
-        <canvas id="expenseChart"></canvas>
-      </div>
-      <div id="expenseSubDetail" class="expense-sub-detail hidden"></div>
-      <div class="chart-legend" id="expenseLegend"></div>
-      <div class="empty-state hidden" id="expenseEmpty">
-        <div>Нет расходов за выбранный период</div>
+    <div class="card collapsible-card" id="linkedAnalysisCard" data-collapse-key="linked">
+      <div class="card-title collapsible-head">Одинаковые имена: приход − расход <span class="collapse-chev">▼</span></div>
+      <div class="collapsible-body">
+        <p class="text-sm text-muted mb-2">Если источник дохода и категория расхода называются одинаково (например «Мама»), цвет общий, а здесь — разница за период.</p>
+        <div id="linkedAnalysisList"></div>
+        <div class="empty-state hidden" id="linkedAnalysisEmpty">Нет совпадений имён или операций за период</div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Доходы по источникам</div>
-      <div class="chart-container">
-        <canvas id="incomeChart"></canvas>
+    <div class="card collapsible-card" data-collapse-key="expense-chart">
+      <div class="card-title collapsible-head">Расходы по категориям <span class="collapse-chev">▼</span></div>
+      <div class="collapsible-body">
+        <p class="text-sm text-muted mb-2">Нажмите на категорию в списке — раскроются подкатегории. На сегмент графика — то же.</p>
+        <div class="chart-container">
+          <canvas id="expenseChart"></canvas>
+        </div>
+        <div id="expenseSubDetail" class="expense-sub-detail hidden"></div>
+        <div class="chart-legend" id="expenseLegend"></div>
+        <div class="empty-state hidden" id="expenseEmpty">
+          <div>Нет расходов за выбранный период</div>
+        </div>
       </div>
-      <div class="chart-legend" id="incomeLegend"></div>
-      <div class="empty-state hidden" id="incomeEmpty">
-        <div>Нет доходов за выбранный период</div>
+    </div>
+
+    <div class="card collapsible-card" data-collapse-key="income-chart">
+      <div class="card-title collapsible-head">Доходы по источникам <span class="collapse-chev">▼</span></div>
+      <div class="collapsible-body">
+        <div class="chart-container">
+          <canvas id="incomeChart"></canvas>
+        </div>
+        <div class="chart-legend" id="incomeLegend"></div>
+        <div class="empty-state hidden" id="incomeEmpty">
+          <div>Нет доходов за выбранный период</div>
+        </div>
       </div>
     </div>
   </div>
@@ -1241,9 +1311,14 @@
 
   <!-- SCREEN: Settings -->
   <div class="screen" id="screen-settings">
-    <div class="card">
-      <div class="settings-section">
-        <h3>Синхронизация JSONBin</h3>
+    <div class="collapse-toolbar">
+      <button type="button" class="btn btn-ghost" id="btnCollapseAllSettings">Свернуть разделы</button>
+      <button type="button" class="btn btn-ghost" id="btnExpandAllSettings">Развернуть разделы</button>
+    </div>
+
+    <div class="card collapsible-card" data-collapse-key="sync">
+      <div class="card-title collapsible-head">Синхронизация JSONBin <span class="collapse-chev">▼</span></div>
+      <div class="collapsible-body settings-section">
         <p class="text-sm text-muted mb-2">Создайте бесплатный аккаунт на <a href="https://jsonbin.io" target="_blank" style="color:var(--primary)">jsonbin.io</a>, скопируйте Master Key и создайте Bin.</p>
         <div class="form-group">
           <label>Bin ID</label>
@@ -1261,9 +1336,9 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="settings-section">
-        <h3>Начальные остатки</h3>
+    <div class="card collapsible-card" data-collapse-key="initial">
+      <div class="card-title collapsible-head">Начальные остатки <span class="collapse-chev">▼</span></div>
+      <div class="collapsible-body settings-section">
         <p class="text-sm text-muted mb-2">Стартовые суммы на счетах (до учёта операций).</p>
         <div class="form-group">
           <label>Visa (Br)</label>
@@ -1281,25 +1356,25 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="settings-section">
-        <h3>Категории расходов</h3>
+    <div class="card collapsible-card" data-collapse-key="cats">
+      <div class="card-title collapsible-head">Категории расходов <span class="collapse-chev">▼</span></div>
+      <div class="collapsible-body settings-section">
         <div class="cat-list" id="catList"></div>
         <button class="btn btn-add mt-2" id="btnAddCategory">+ Новая категория</button>
       </div>
     </div>
 
-    <div class="card">
-      <div class="settings-section">
-        <h3>Источники доходов</h3>
+    <div class="card collapsible-card" data-collapse-key="sources">
+      <div class="card-title collapsible-head">Источники доходов <span class="collapse-chev">▼</span></div>
+      <div class="collapsible-body settings-section">
         <div class="cat-list" id="sourceList"></div>
         <button class="btn btn-add mt-2" id="btnAddSource">+ Новый источник</button>
       </div>
     </div>
 
-    <div class="card">
-      <div class="settings-section">
-        <h3>Данные</h3>
+    <div class="card collapsible-card" data-collapse-key="data">
+      <div class="card-title collapsible-head">Данные <span class="collapse-chev">▼</span></div>
+      <div class="collapsible-body settings-section">
         <button class="btn btn-ghost" id="btnExport" style="width:100%;margin-bottom:8px">Экспорт JSON</button>
         <button class="btn btn-ghost" id="btnImport" style="width:100%;margin-bottom:8px">Импорт JSON</button>
         <input type="file" id="importFile" accept=".json" class="hidden">
@@ -2462,42 +2537,73 @@
       }).join('');
     }
 
+    function getExpenseLeafBreakdown(rootId, expenses) {
+      const byLeaf = {};
+      (expenses || []).forEach(tx => {
+        (tx.splits || []).forEach(sp => {
+          if (getRootCategoryId(sp.categoryId) !== rootId) return;
+          if (state.statsFilterCats.length && !categoryMatchesFilter(sp.categoryId)) return;
+          byLeaf[sp.categoryId] = (byLeaf[sp.categoryId] || 0) + sp.amount;
+        });
+      });
+      return Object.entries(byLeaf).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+    }
+
     function renderExpenseLines(containerId, labels, data, colors, rootIds, expenses) {
       const total = data.reduce((a, b) => a + b, 0);
       const el = document.getElementById(containerId);
       if (!el) return;
+      const totalAll = total;
       el.innerHTML = labels.map((l, i) => {
         const pct = total ? Math.round(data[i] / total * 100) : 0;
-        return `<div class="expense-line" data-root="${rootIds[i]}" style="cursor:pointer">
-          <span class="el-name"><span class="legend-dot" style="background:${colors[i]};display:inline-block;margin-right:6px"></span>${l}</span>
-          <span class="el-sum">${formatMoney(data[i])} · ${pct}%</span>
+        const rootId = rootIds[i];
+        const entries = getExpenseLeafBreakdown(rootId, expenses);
+        const catSum = data[i];
+        const hasSubs = entries.length > 0;
+        const subsHtml = hasSubs
+          ? entries.map(([id, sum]) => {
+              const name = getCategoryLeafLabel(id);
+              const pctCat = catSum ? Math.round(sum / catSum * 100) : 0;
+              const pctAll = totalAll ? Math.round(sum / totalAll * 100) : 0;
+              return `<div class="expense-line">
+                <span class="el-name">${name}</span>
+                <span class="el-sum">${formatMoney(sum)} · ${pctCat}% кат. · ${pctAll}% всего</span>
+              </div>`;
+            }).join('')
+          : `<div class="text-muted text-sm" style="padding:4px 0">Нет подкатегорий</div>`;
+        return `<div class="exp-cat-block" data-root="${rootId}">
+          <div class="expense-line exp-cat-toggle ${hasSubs ? '' : ''}" data-root="${rootId}" style="cursor:pointer">
+            <span class="el-name">
+              <span class="chev">▸</span>
+              <span class="legend-dot" style="background:${colors[i]};display:inline-block;margin:0 6px 0 2px"></span>${l}
+            </span>
+            <span class="el-sum">${formatMoney(data[i])} · ${pct}%</span>
+          </div>
+          <div class="exp-sub-list" data-sub-for="${rootId}">${subsHtml}</div>
         </div>`;
       }).join('');
-      el.querySelectorAll('.expense-line').forEach(row => {
-        row.addEventListener('click', () => showExpenseSubDetail(row.dataset.root));
+
+      el.querySelectorAll('.exp-cat-toggle').forEach(row => {
+        row.addEventListener('click', () => toggleExpenseCategoryRow(row.dataset.root));
       });
     }
 
-    function showExpenseSubDetail(rootId) {
+    function fillExpenseSubDetailBox(rootId) {
       const box = document.getElementById('expenseSubDetail');
       if (!box) return;
       const root = getCategory(rootId);
-      if (!root) return;
+      if (!root) {
+        box.classList.add('hidden');
+        return;
+      }
       const expenses = expenseChartMeta.expenses || [];
-      const byLeaf = {};
-      expenses.forEach(tx => {
-        (tx.splits || []).forEach(sp => {
-          if (getRootCategoryId(sp.categoryId) !== rootId) return;
-          byLeaf[sp.categoryId] = (byLeaf[sp.categoryId] || 0) + sp.amount;
-        });
-      });
-      const entries = Object.entries(byLeaf).filter(([, v]) => v > 0);
+      const entries = getExpenseLeafBreakdown(rootId, expenses);
       const total = entries.reduce((s, [, v]) => s + v, 0);
       let html = `<h4>${root.name} — разбивка по подкатегориям</h4>`;
       if (entries.length === 0) {
         html += `<div class="text-muted">Нет данных</div>`;
       } else {
-        entries.sort((a, b) => b[1] - a[1]).forEach(([id, sum]) => {
+        entries.forEach(([id, sum]) => {
           const name = getCategoryLeafLabel(id);
           const pct = total ? Math.round(sum / total * 100) : 0;
           html += `<div class="expense-line">
@@ -2508,6 +2614,34 @@
       }
       box.innerHTML = html;
       box.classList.remove('hidden');
+    }
+
+    function toggleExpenseCategoryRow(rootId, forceOpen) {
+      const block = document.querySelector(`.exp-cat-block[data-root="${rootId}"]`);
+      if (!block) {
+        if (forceOpen) fillExpenseSubDetailBox(rootId);
+        return;
+      }
+      const row = block.querySelector('.exp-cat-toggle');
+      const sub = block.querySelector('.exp-sub-list');
+      if (!sub || !row) return;
+      const willOpen = forceOpen === true ? true : forceOpen === false ? false : !sub.classList.contains('open');
+      if (willOpen) {
+        document.querySelectorAll('.exp-sub-list.open').forEach(s => s.classList.remove('open'));
+        document.querySelectorAll('.exp-cat-toggle.open').forEach(r => r.classList.remove('open'));
+        sub.classList.add('open');
+        row.classList.add('open');
+        fillExpenseSubDetailBox(rootId);
+      } else {
+        sub.classList.remove('open');
+        row.classList.remove('open');
+        const box = document.getElementById('expenseSubDetail');
+        if (box) box.classList.add('hidden');
+      }
+    }
+
+    function showExpenseSubDetail(rootId) {
+      toggleExpenseCategoryRow(rootId, true);
     }
 
     // ========== RENDER LISTS ==========
@@ -3013,6 +3147,25 @@
         state.statsFilterSources = [];
         renderStats();
         toast('Фильтры сброшены');
+      });
+
+      document.getElementById('btnCollapseAll').addEventListener('click', () => {
+        document.querySelectorAll('#screen-stats .collapsible-card').forEach(c => c.classList.add('collapsed'));
+      });
+      document.getElementById('btnExpandAll').addEventListener('click', () => {
+        document.querySelectorAll('#screen-stats .collapsible-card').forEach(c => c.classList.remove('collapsed'));
+      });
+      document.getElementById('btnCollapseAllSettings').addEventListener('click', () => {
+        document.querySelectorAll('#screen-settings .collapsible-card').forEach(c => c.classList.add('collapsed'));
+      });
+      document.getElementById('btnExpandAllSettings').addEventListener('click', () => {
+        document.querySelectorAll('#screen-settings .collapsible-card').forEach(c => c.classList.remove('collapsed'));
+      });
+      document.addEventListener('click', e => {
+        const head = e.target.closest('.collapsible-head');
+        if (!head) return;
+        const card = head.closest('.collapsible-card');
+        if (card) card.classList.toggle('collapsed');
       });
 
       // Period
