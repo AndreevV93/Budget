@@ -118,6 +118,30 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .header-add {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.95);
+      color: var(--primary-dark);
+      font-size: 1.4rem;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      flex-shrink: 0;
+    }
+    .header-add:active { transform: scale(0.94); }
     .sync-status {
       display: inline-flex;
       align-items: center;
@@ -129,12 +153,82 @@
       background: rgba(15, 23, 42, 0.18);
       border: 1px solid rgba(255,255,255,0.2);
       flex-shrink: 0;
-      max-width: 42%;
+      max-width: 38vw;
     }
     .sync-status #syncText {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+    .quick-sheet {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      z-index: 200;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 16px;
+      padding-bottom: calc(16px + var(--safe-bottom));
+    }
+    .quick-sheet.show { display: flex; }
+    .quick-sheet-panel {
+      width: 100%;
+      max-width: 420px;
+      background: #fff;
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: 0 -8px 30px rgba(0,0,0,0.15);
+    }
+    .quick-sheet-title {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    .quick-sheet-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1.5px solid var(--border);
+      background: #fff;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      margin-bottom: 8px;
+      text-align: left;
+    }
+    .quick-sheet-btn:active { background: var(--primary-light); }
+    .quick-sheet-btn .qi {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .quick-sheet-btn.income .qi { background: #DCFCE7; color: #16A34A; }
+    .quick-sheet-btn.expense .qi { background: #FEE2E2; color: #DC2626; }
+    .quick-sheet-btn.transfer .qi { background: #FFEDD5; color: #B45309; }
+    .quick-sheet-cancel {
+      width: 100%;
+      margin-top: 4px;
+      padding: 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 0.9rem;
+      cursor: pointer;
     }
     .sync-dot {
       width: 8px;
@@ -1253,16 +1347,38 @@
       <div class="header-brand">
         <div class="header-logo" aria-hidden="true">💰</div>
         <div class="header-text">
-          <h1>Бюджет</h1>
-          <div class="header-sub">Личный учёт · Br</div>
+          <h1 id="headerTitle">Бюджет</h1>
+          <div class="header-sub" id="headerSub">Личный учёт · Br</div>
         </div>
       </div>
-      <div class="sync-status" id="syncStatus" title="Статус синхронизации">
-        <span class="sync-dot" id="syncDot"></span>
-        <span id="syncText">Локально</span>
+      <div class="header-actions">
+        <button type="button" class="header-add" id="btnHeaderAdd" title="Быстрое добавление" aria-label="Добавить">+</button>
+        <div class="sync-status" id="syncStatus" title="Статус синхронизации">
+          <span class="sync-dot" id="syncDot"></span>
+          <span id="syncText">Локально</span>
+        </div>
       </div>
     </div>
   </header>
+
+  <div class="quick-sheet" id="quickSheet" aria-hidden="true">
+    <div class="quick-sheet-panel">
+      <div class="quick-sheet-title">Что добавить?</div>
+      <button type="button" class="quick-sheet-btn income" data-quick="income">
+        <span class="qi">+</span>
+        <span>Доход</span>
+      </button>
+      <button type="button" class="quick-sheet-btn expense" data-quick="expense">
+        <span class="qi">−</span>
+        <span>Расход</span>
+      </button>
+      <button type="button" class="quick-sheet-btn transfer" data-quick="transfer">
+        <span class="qi">⇄</span>
+        <span>Перевод между счетами</span>
+      </button>
+      <button type="button" class="quick-sheet-cancel" id="quickSheetClose">Отмена</button>
+    </div>
+  </div>
 
   <!-- SCREEN: Stats -->
   <div class="screen active" id="screen-stats">
@@ -2712,6 +2828,99 @@
       return bal;
     }
 
+    function getActiveScreen() {
+      const s = document.querySelector('.screen.active');
+      return s ? s.id.replace('screen-', '') : 'stats';
+    }
+
+    function updateHeader() {
+      const titleEl = document.getElementById('headerTitle');
+      const subEl = document.getElementById('headerSub');
+      if (!titleEl || !subEl) return;
+      const screen = getActiveScreen();
+      const bal = getAccountBalances();
+      const total = roundMoney(bal.visa + bal.mastercard + bal.cash);
+      const openP = getOpenPlannedSum();
+      const after = roundMoney(total - openP);
+
+      if (screen === 'stats') {
+        titleEl.textContent = 'Бюджет';
+        subEl.textContent = openP > 0
+          ? `На руках ${formatMoney(total)} · после планов ${formatMoney(after)}`
+          : `На руках ${formatMoney(total)}`;
+      } else if (screen === 'income') {
+        titleEl.textContent = 'Доходы';
+        const todaySum = state.transactions
+          .filter(t => t.type === 'income' && t.date === today())
+          .reduce((s, t) => s + t.amount, 0);
+        subEl.textContent = todaySum > 0
+          ? `Сегодня +${formatMoney(todaySum)}`
+          : 'Добавить поступление';
+      } else if (screen === 'expense') {
+        titleEl.textContent = 'Расходы';
+        const todaySum = state.transactions
+          .filter(t => t.type === 'expense' && t.date === today())
+          .reduce((s, t) => s + t.amount, 0);
+        subEl.textContent = todaySum > 0
+          ? `Сегодня −${formatMoney(todaySum)}`
+          : 'Добавить трату';
+      } else if (screen === 'history') {
+        titleEl.textContent = 'История';
+        const n = filterHistoryTx().length;
+        subEl.textContent = n ? `Операций в фильтре: ${n}` : 'Нет операций в фильтре';
+      } else if (screen === 'settings') {
+        titleEl.textContent = 'Настройки';
+        subEl.textContent = syncConfig.binId ? 'Синхронизация настроена' : 'Локальные данные · JSONBin';
+      } else {
+        titleEl.textContent = 'Бюджет';
+        subEl.textContent = 'Личный учёт · Br';
+      }
+    }
+
+    function navigateToScreen(name) {
+      document.querySelectorAll('.nav-item').forEach(b => {
+        b.classList.toggle('active', b.dataset.screen === name);
+      });
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      const screen = document.getElementById('screen-' + name);
+      if (screen) screen.classList.add('active');
+      if (name === 'stats') renderStats();
+      if (name === 'income') { renderIncomeList(); fillSourceSelect(); }
+      if (name === 'expense') {
+        renderExpenseList();
+        refreshSplitCategorySelects();
+        fillPlannedCategorySelect();
+        renderPlannedList();
+        renderExpenseAllocList();
+        if (!document.querySelector('#splitsList .split-row')) addSplitRow();
+      }
+      if (name === 'history') renderHistory();
+      if (name === 'settings') {
+        renderCategories();
+        renderSources();
+        updateSyncUI(syncConfig.binId ? 'ok' : 'local');
+        document.getElementById('initialVisa').value = state.initialBalances.visa || '';
+        document.getElementById('initialMastercard').value = state.initialBalances.mastercard || '';
+        document.getElementById('initialCash').value = state.initialBalances.cash || '';
+      }
+      updateHeader();
+      window.scrollTo(0, 0);
+    }
+
+    function openQuickSheet() {
+      const sheet = document.getElementById('quickSheet');
+      if (!sheet) return;
+      sheet.classList.add('show');
+      sheet.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeQuickSheet() {
+      const sheet = document.getElementById('quickSheet');
+      if (!sheet) return;
+      sheet.classList.remove('show');
+      sheet.setAttribute('aria-hidden', 'true');
+    }
+
     function renderAccountBalances() {
       const bal = getAccountBalances();
       const map = { balVisa: 'visa', balMastercard: 'mastercard', balCash: 'cash' };
@@ -2735,6 +2944,7 @@
         elAfter.textContent = formatMoney(after);
         elAfter.style.color = after < 0 ? 'var(--expense)' : 'var(--income)';
       }
+      updateHeader();
 
       const init = roundMoney(
         (state.initialBalances.visa || 0) +
@@ -3891,6 +4101,7 @@
           <div class="tx-detail">${buildTxDetailHtml(tx)}</div>
         </div>`;
       }).join('');
+      updateHeader();
     }
 
     // ========== CATEGORIES & SOURCES UI ==========
@@ -4314,29 +4525,29 @@
     function initEvents() {
       // Nav
       document.querySelectorAll('.nav-item').forEach(btn => {
+        btn.addEventListener('click', () => navigateToScreen(btn.dataset.screen));
+      });
+
+      document.getElementById('btnHeaderAdd').addEventListener('click', openQuickSheet);
+      document.getElementById('quickSheetClose').addEventListener('click', closeQuickSheet);
+      document.getElementById('quickSheet').addEventListener('click', e => {
+        if (e.target.id === 'quickSheet') closeQuickSheet();
+      });
+      document.querySelectorAll('[data-quick]').forEach(btn => {
         btn.addEventListener('click', () => {
-          document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-          document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-          btn.classList.add('active');
-          document.getElementById('screen-' + btn.dataset.screen).classList.add('active');
-          if (btn.dataset.screen === 'stats') renderStats();
-          if (btn.dataset.screen === 'income') { renderIncomeList(); fillSourceSelect(); }
-          if (btn.dataset.screen === 'expense') {
-            renderExpenseList();
-            refreshSplitCategorySelects();
-            fillPlannedCategorySelect();
-            renderPlannedList();
-            renderExpenseAllocList();
-            if (!document.querySelector('#splitsList .split-row')) addSplitRow();
-          }
-          if (btn.dataset.screen === 'history') renderHistory();
-          if (btn.dataset.screen === 'settings') {
-            renderCategories();
-            renderSources();
-            updateSyncUI(syncConfig.binId ? 'ok' : 'local');
-            document.getElementById('initialVisa').value = state.initialBalances.visa || '';
-            document.getElementById('initialMastercard').value = state.initialBalances.mastercard || '';
-            document.getElementById('initialCash').value = state.initialBalances.cash || '';
+          const q = btn.dataset.quick;
+          closeQuickSheet();
+          if (q === 'income') {
+            navigateToScreen('income');
+            document.getElementById('incomeAmount')?.focus();
+          } else if (q === 'expense') {
+            navigateToScreen('expense');
+            document.getElementById('expenseAmount')?.focus();
+          } else if (q === 'transfer') {
+            navigateToScreen('stats');
+            document.querySelector('[data-collapse-key="transfer"]')?.classList.remove('collapsed');
+            document.getElementById('transferAmount')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.getElementById('transferAmount')?.focus();
           }
         });
       });
@@ -5339,6 +5550,7 @@
       renderCategories();
       renderSources();
       fillSourceSelect();
+      updateHeader();
     }
 
     function showSetupIfNeeded() {
