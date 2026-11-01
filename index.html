@@ -82,56 +82,64 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      gap: 10px;
     }
     .header-brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       min-width: 0;
+      flex: 1;
     }
     .header-logo {
-      width: 44px;
-      height: 44px;
-      border-radius: 14px;
-      background: rgba(255,255,255,0.18);
-      border: 1px solid rgba(255,255,255,0.22);
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.25);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.35rem;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
       flex-shrink: 0;
       backdrop-filter: blur(6px);
     }
-    .header-text { min-width: 0; }
-    .header h1 {
-      font-size: 1.2rem;
+    .header-text {
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .header-balance {
+      display: block;
+      font-size: clamp(0.95rem, 4.2vw, 1.15rem);
       font-weight: 700;
       letter-spacing: -0.03em;
-      line-height: 1.2;
-    }
-    .header-sub {
-      font-size: 0.72rem;
-      opacity: 0.88;
-      margin-top: 2px;
+      line-height: 1.25;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
+    .header-date {
+      display: block;
+      font-size: 0.72rem;
+      opacity: 0.92;
+      line-height: 1.25;
+      white-space: normal;
+      word-break: break-word;
     }
     .header-add {
-      width: 36px;
-      height: 36px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
       border: none;
       background: rgba(255,255,255,0.95);
       color: var(--primary-dark);
-      font-size: 1.4rem;
+      font-size: 1.45rem;
       font-weight: 700;
       line-height: 1;
       cursor: pointer;
@@ -1345,19 +1353,13 @@
   <header class="header">
     <div class="header-inner">
       <div class="header-brand">
-        <div class="header-logo" aria-hidden="true">💰</div>
+        <div class="header-logo" aria-hidden="true" title="Белорусский рубль">Br</div>
         <div class="header-text">
-          <h1 id="headerTitle">Бюджет</h1>
-          <div class="header-sub" id="headerSub">Личный учёт · Br</div>
+          <div class="header-balance" id="headerBalance">0 Br</div>
+          <div class="header-date" id="headerDate"></div>
         </div>
       </div>
-      <div class="header-actions">
-        <button type="button" class="header-add" id="btnHeaderAdd" title="Быстрое добавление" aria-label="Добавить">+</button>
-        <div class="sync-status" id="syncStatus" title="Статус синхронизации">
-          <span class="sync-dot" id="syncDot"></span>
-          <span id="syncText">Локально</span>
-        </div>
-      </div>
+      <button type="button" class="header-add" id="btnHeaderAdd" title="Быстрое добавление" aria-label="Добавить">+</button>
     </div>
   </header>
 
@@ -2671,27 +2673,21 @@
     }
 
     function updateSyncUI(status) {
-      const dot = document.getElementById('syncDot');
-      const text = document.getElementById('syncText');
       const info = document.getElementById('syncInfo');
-      dot.className = 'sync-dot';
+      if (!info) return;
       if (status === 'syncing') {
-        dot.classList.add('syncing');
-        text.textContent = 'Синхронизация...';
+        info.innerHTML = `<span class="status-badge warn">Синхронизация...</span>`;
       } else if (status === 'ok') {
-        text.textContent = 'Синхронизировано ' + (syncConfig.lastSync ? new Date(syncConfig.lastSync).toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : '');
-        if (info) info.innerHTML = `<span class="status-badge ok">✓ Подключено</span>`;
+        const when = syncConfig.lastSync
+          ? new Date(syncConfig.lastSync).toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+          : '';
+        info.innerHTML = `<span class="status-badge ok">✓ Подключено${when ? ' · ' + when : ''}</span>`;
       } else if (status === 'error') {
-        dot.classList.add('error');
-        text.textContent = 'Ошибка синхронизации';
-        if (info) info.innerHTML = `<span class="status-badge err">Ошибка</span>`;
+        info.innerHTML = `<span class="status-badge err">Ошибка синхронизации</span>`;
       } else {
-        text.textContent = syncConfig.binId ? 'Ожидание...' : 'Локально (без облака)';
-        if (info) {
-          info.innerHTML = syncConfig.binId
-            ? `<span class="status-badge warn">Ключ сохранён</span>`
-            : `<span class="status-badge warn">Не настроено</span>`;
-        }
+        info.innerHTML = syncConfig.binId
+          ? `<span class="status-badge warn">Ключ сохранён</span>`
+          : `<span class="status-badge warn">Не настроено</span>`;
       }
     }
 
@@ -2833,48 +2829,21 @@
       return s ? s.id.replace('screen-', '') : 'stats';
     }
 
+    function formatHeaderDate(iso) {
+      const d = new Date((iso || today()) + 'T12:00:00');
+      const months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+      const weekdays = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+      return `${weekdays[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+    }
+
     function updateHeader() {
-      const titleEl = document.getElementById('headerTitle');
-      const subEl = document.getElementById('headerSub');
-      if (!titleEl || !subEl) return;
-      const screen = getActiveScreen();
+      const balEl = document.getElementById('headerBalance');
+      const dateEl = document.getElementById('headerDate');
+      if (!balEl || !dateEl) return;
       const bal = getAccountBalances();
       const total = roundMoney(bal.visa + bal.mastercard + bal.cash);
-      const openP = getOpenPlannedSum();
-      const after = roundMoney(total - openP);
-
-      if (screen === 'stats') {
-        titleEl.textContent = 'Бюджет';
-        subEl.textContent = openP > 0
-          ? `На руках ${formatMoney(total)} · после планов ${formatMoney(after)}`
-          : `На руках ${formatMoney(total)}`;
-      } else if (screen === 'income') {
-        titleEl.textContent = 'Доходы';
-        const todaySum = state.transactions
-          .filter(t => t.type === 'income' && t.date === today())
-          .reduce((s, t) => s + t.amount, 0);
-        subEl.textContent = todaySum > 0
-          ? `Сегодня +${formatMoney(todaySum)}`
-          : 'Добавить поступление';
-      } else if (screen === 'expense') {
-        titleEl.textContent = 'Расходы';
-        const todaySum = state.transactions
-          .filter(t => t.type === 'expense' && t.date === today())
-          .reduce((s, t) => s + t.amount, 0);
-        subEl.textContent = todaySum > 0
-          ? `Сегодня −${formatMoney(todaySum)}`
-          : 'Добавить трату';
-      } else if (screen === 'history') {
-        titleEl.textContent = 'История';
-        const n = filterHistoryTx().length;
-        subEl.textContent = n ? `Операций в фильтре: ${n}` : 'Нет операций в фильтре';
-      } else if (screen === 'settings') {
-        titleEl.textContent = 'Настройки';
-        subEl.textContent = syncConfig.binId ? 'Синхронизация настроена' : 'Локальные данные · JSONBin';
-      } else {
-        titleEl.textContent = 'Бюджет';
-        subEl.textContent = 'Личный учёт · Br';
-      }
+      balEl.textContent = formatMoney(total);
+      dateEl.textContent = formatHeaderDate(today());
     }
 
     function navigateToScreen(name) {
