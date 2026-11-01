@@ -1061,6 +1061,28 @@
     .account-option .opt-icon {
       font-size: 1.1rem;
     }
+    .pdf-opts {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .pdf-opt {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.88rem;
+    }
+    .pdf-opt:has(input:checked) {
+      border-color: var(--primary);
+      background: #EEF2FF;
+    }
+    .pdf-opt input { width: 16px; height: 16px; accent-color: var(--primary); flex-shrink: 0; }
 
     .split-row {
       flex-wrap: wrap;
@@ -1598,6 +1620,7 @@
       <div class="collapsible-body settings-section">
         <div class="cat-list" id="catList"></div>
         <button class="btn btn-add mt-2" id="btnAddCategory">+ Новая категория</button>
+        <button class="btn btn-ghost mt-2" id="btnCheckCatColors" style="width:100%">Проверить одинаковость цветов</button>
       </div>
     </div>
 
@@ -1665,18 +1688,19 @@
   </div>
 
   <div class="modal-overlay" id="pdfModal">
-    <div class="modal" style="max-height:90vh;overflow:auto">
+    <div class="modal" style="max-height:92vh;overflow:auto;max-width:440px">
       <div class="modal-header">
-        <h3>Экспорт в PDF</h3>
+        <h3>Конструктор PDF</h3>
         <button class="modal-close" id="pdfModalClose">×</button>
       </div>
-      <p class="text-sm text-muted mb-2">Отметьте блоки. Откроется окно печати — выберите «Сохранить как PDF».</p>
+      <p class="text-sm text-muted mb-2">Соберите отчёт. В печати выберите «Сохранить как PDF».</p>
+
+      <div class="filter-section-title">Период</div>
       <div class="form-group">
-        <label>Период в отчёте</label>
         <select id="pdfPeriod">
-          <option value="month">Как «месяц» в статистике</option>
-          <option value="range">Как «период» в статистике</option>
-          <option value="all">Всё время</option>
+          <option value="stats">Как на экране «Статистика» сейчас</option>
+          <option value="month">Последние 30 дней</option>
+          <option value="all" selected>Всё время</option>
           <option value="custom">Свои даты</option>
         </select>
       </div>
@@ -1690,16 +1714,33 @@
           <input type="date" id="pdfTo">
         </div>
       </div>
-      <div class="filter-section-title">Блоки отчёта</div>
-      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfBal" checked> Остатки по счетам</label>
-      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfSummary" checked> Доходы / расходы / итог за период</label>
-      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfExpCats" checked> Расходы по категориям</label>
-      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfIncSrc" checked> Доходы по источникам</label>
-      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfLinked" checked> Совпадающие имена</label>
-      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfPlanned" checked> Предполагаемые траты</label>
-      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfTx" checked> Список операций за период</label>
-      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfCurious"> Текущий «любопытный» график (таблица данных)</label>
-      <button class="btn btn-primary" id="btnPdfGo" style="margin-top:12px">Сформировать PDF</button>
+
+      <div class="filter-section-title">Текстовые блоки</div>
+      <div class="pdf-opts">
+        <label class="pdf-opt"><input type="checkbox" id="pdfBal" checked><span>Остатки по счетам</span></label>
+        <label class="pdf-opt"><input type="checkbox" id="pdfSummary" checked><span>Итоги: доходы / расходы</span></label>
+        <label class="pdf-opt"><input type="checkbox" id="pdfExpCats" checked><span>Таблица расходов по категориям</span></label>
+        <label class="pdf-opt"><input type="checkbox" id="pdfIncSrc" checked><span>Таблица доходов по источникам</span></label>
+        <label class="pdf-opt"><input type="checkbox" id="pdfLinked" checked><span>Совпадающие имена</span></label>
+        <label class="pdf-opt"><input type="checkbox" id="pdfPlanned" checked><span>Предполагаемые траты</span></label>
+        <label class="pdf-opt"><input type="checkbox" id="pdfTx"><span>Список операций</span></label>
+      </div>
+
+      <div class="filter-section-title">Графики (можно несколько)</div>
+      <div class="pdf-opts">
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="expBars" checked><span>Расходы по категориям</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="incBars" checked><span>Доходы по источникам</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="months"><span>Доходы vs расходы по месяцам</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="weekday"><span>Средний расход по дням недели</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="top"><span>Топ‑10 категорий</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="accounts"><span>Структура остатков</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="records"><span>Рекордные дни</span></label>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button type="button" class="btn btn-ghost btn-sm" id="pdfSelectAll" style="flex:1">Выбрать всё</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="pdfSelectNone" style="flex:1">Снять всё</button>
+      </div>
+      <button class="btn btn-primary" id="btnPdfGo" style="margin-top:14px">Сформировать отчёт</button>
     </div>
   </div>
 
@@ -1977,13 +2018,14 @@
         renderCategories();
         renderSources();
         refreshSplitCategorySelects();
-        // одно сводное сообщение + тосты по категориям
         const el = document.getElementById('toast');
         const names = messages.map(m => m.name).join(', ');
         el.innerHTML = `Цвета обновлены: ${names}`;
         el.classList.add('show');
         setTimeout(() => el.classList.remove('show'), 3200);
         setTimeout(() => showColorChangeToasts(messages), 800);
+      } else {
+        toast('Совпадений и похожих цветов нет');
       }
       return messages;
     }
@@ -2214,14 +2256,21 @@
       fillSourceSelect();
     }
 
+    function localISODate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
     function today() {
-      return new Date().toISOString().slice(0, 10);
+      return localISODate(new Date());
     }
 
     function monthAgo() {
       const d = new Date();
       d.setMonth(d.getMonth() - 1);
-      return d.toISOString().slice(0, 10);
+      return localISODate(d);
     }
 
     function toast(msg) {
@@ -4204,7 +4253,6 @@
           }
           if (btn.dataset.screen === 'history') renderHistory();
           if (btn.dataset.screen === 'settings') {
-            runSettingsColorAudit();
             renderCategories();
             renderSources();
             updateSyncUI(syncConfig.binId ? 'ok' : 'local');
@@ -4751,6 +4799,9 @@
       });
 
       document.getElementById('btnAddCategory').addEventListener('click', () => openModal('category'));
+      document.getElementById('btnCheckCatColors').addEventListener('click', () => {
+        runSettingsColorAudit();
+      });
       document.getElementById('btnAddSource').addEventListener('click', () => openModal('source'));
 
       // Sync settings
@@ -4793,6 +4844,12 @@
       document.getElementById('btnPdfGo').addEventListener('click', () => {
         exportStatsPdf();
         document.getElementById('pdfModal').classList.remove('show');
+      });
+      document.getElementById('pdfSelectAll').addEventListener('click', () => {
+        document.querySelectorAll('#pdfModal input[type=checkbox]').forEach(c => { c.checked = true; });
+      });
+      document.getElementById('pdfSelectNone').addEventListener('click', () => {
+        document.querySelectorAll('#pdfModal input[type=checkbox]').forEach(c => { c.checked = false; });
       });
 
       document.getElementById('btnExport').addEventListener('click', () => {
@@ -4875,27 +4932,41 @@
     }
 
     function getPdfDateRange() {
-      const mode = document.getElementById('pdfPeriod')?.value || 'month';
+      const mode = document.getElementById('pdfPeriod')?.value || 'all';
       if (mode === 'custom') {
-        return {
-          from: document.getElementById('pdfFrom').value || null,
-          to: document.getElementById('pdfTo').value || null
-        };
+        const f = document.getElementById('pdfFrom').value || null;
+        const t = document.getElementById('pdfTo').value || null;
+        return { from: f, to: t };
       }
       if (mode === 'all') return { from: null, to: null };
-      if (mode === 'range') {
-        return {
-          from: state.dateFrom || monthAgo(),
-          to: state.dateTo || today()
-        };
-      }
-      // month
+      if (mode === 'stats') return getDateRange();
+      // month = last 30 days
       return { from: monthAgo(), to: today() };
+    }
+
+    function pdfBarBlock(title, items) {
+      // items: [{label, value, color}]
+      if (!items.length) {
+        return `<div class="section"><h2>${title}</h2><p class="empty">Нет данных за период</p></div>`;
+      }
+      const max = Math.max(...items.map(i => i.value), 0.01);
+      let rows = items.map(i => {
+        const pct = Math.round((i.value / max) * 100);
+        const color = i.color || '#4F46E5';
+        return `<div class="bar-row">
+          <div class="bar-label">${i.label}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
+          <div class="bar-val">${formatMoney(i.value)}</div>
+        </div>`;
+      }).join('');
+      return `<div class="section"><h2>${title}</h2><div class="bars">${rows}</div></div>`;
     }
 
     function exportStatsPdf() {
       const { from, to } = getPdfDateRange();
-      const tx = state.transactions.filter(t => {
+      const allTx = state.transactions || [];
+      const tx = allTx.filter(t => {
+        if (!t || !t.date) return false;
         if (from && t.date < from) return false;
         if (to && t.date > to) return false;
         return true;
@@ -4904,74 +4975,145 @@
       const incomes = tx.filter(t => t.type === 'income');
       const bal = getAccountBalances();
       const total = roundMoney(bal.visa + bal.mastercard + bal.cash);
-      const sumInc = incomes.reduce((s, t) => s + t.amount, 0);
-      const sumExp = expenses.reduce((s, t) => s + t.amount, 0);
+      const sumInc = incomes.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+      const sumExp = expenses.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+
+      // category aggregation (include amount without splits)
+      const expByCat = {};
+      expenses.forEach(t => {
+        const splits = t.splits && t.splits.length ? t.splits : [{ categoryId: '_none', amount: t.amount }];
+        splits.forEach(sp => {
+          const r = sp.categoryId === '_none' ? '_none' : getRootCategoryId(sp.categoryId);
+          expByCat[r] = (expByCat[r] || 0) + (Number(sp.amount) || 0);
+        });
+      });
+      const expCatItems = Object.entries(expByCat)
+        .map(([id, value]) => {
+          const c = id === '_none' ? null : getCategory(id);
+          return {
+            id,
+            label: c ? c.name : (id === '_none' ? 'Без категории' : '—'),
+            value: roundMoney(value),
+            color: c ? c.color : '#94A3B8'
+          };
+        })
+        .sort((a, b) => b.value - a.value);
+
+      const incBySrc = {};
+      incomes.forEach(t => {
+        const key = t.sourceId || '_none';
+        incBySrc[key] = (incBySrc[key] || 0) + (Number(t.amount) || 0);
+      });
+      const incSrcItems = Object.entries(incBySrc)
+        .map(([id, value]) => {
+          const s = state.sources.find(x => x.id === id);
+          return {
+            label: s ? s.name : (id === '_none' ? 'Без источника' : '—'),
+            value: roundMoney(value),
+            color: s ? (s.color || '#16A34A') : '#94A3B8'
+          };
+        })
+        .sort((a, b) => b.value - a.value);
 
       const periodLabel = from || to
         ? `${from ? formatDate(from) : '…'} — ${to ? formatDate(to) : '…'}`
         : 'Всё время';
 
-      let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Статистика бюджета</title>
+      const charts = [...document.querySelectorAll('.pdf-chart:checked')].map(c => c.value);
+
+      let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Отчёт — Бюджет</title>
         <style>
-          body{font-family:system-ui,sans-serif;padding:24px;color:#0f172a;font-size:13px}
-          h1{font-size:18px;margin:0 0 4px} h2{font-size:14px;margin:18px 0 8px;border-bottom:1px solid #e2e8f0;padding-bottom:4px}
-          .muted{color:#64748b;font-size:12px;margin-bottom:16px}
-          table{width:100%;border-collapse:collapse;margin-bottom:8px}
-          th,td{border:1px solid #e2e8f0;padding:6px 8px;text-align:left}
-          th{background:#f8fafc}
-          .r{text-align:right}
-          @media print{body{padding:12px}}
+          *{box-sizing:border-box}
+          body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;margin:0;padding:28px;color:#0f172a;font-size:12.5px;background:#fff}
+          .hero{background:linear-gradient(135deg,#4F46E5,#0D9488);color:#fff;border-radius:16px;padding:20px 22px;margin-bottom:22px}
+          .hero h1{margin:0 0 6px;font-size:20px;font-weight:700}
+          .hero .sub{opacity:.9;font-size:12px}
+          .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 0}
+          .kpi div{background:rgba(255,255,255,.15);border-radius:12px;padding:10px 12px}
+          .kpi .l{font-size:10px;opacity:.85;text-transform:uppercase;letter-spacing:.04em}
+          .kpi .v{font-size:15px;font-weight:700;margin-top:2px}
+          .section{margin-bottom:20px;page-break-inside:avoid}
+          h2{font-size:13px;margin:0 0 10px;color:#1e293b;border-left:3px solid #4F46E5;padding-left:10px}
+          table{width:100%;border-collapse:collapse}
+          th,td{padding:7px 8px;border-bottom:1px solid #e2e8f0;text-align:left}
+          th{font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#64748b;background:#f8fafc}
+          .r{text-align:right;font-variant-numeric:tabular-nums}
+          .bars{display:flex;flex-direction:column;gap:8px}
+          .bar-row{display:grid;grid-template-columns:110px 1fr 72px;gap:8px;align-items:center}
+          .bar-label{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+          .bar-track{height:12px;background:#f1f5f9;border-radius:6px;overflow:hidden}
+          .bar-fill{height:100%;border-radius:6px;min-width:2px}
+          .bar-val{font-size:11px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+          .empty{color:#94a3b8;font-style:italic}
+          .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+          .card{border:1px solid #e2e8f0;border-radius:12px;padding:12px;background:#f8fafc}
+          .card .l{font-size:10px;color:#64748b}
+          .card .v{font-size:16px;font-weight:700;margin-top:4px}
+          .footer{margin-top:28px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;text-align:center}
+          @media print{
+            body{padding:12px}
+            .hero{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+            .bar-fill{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+          }
         </style></head><body>
-        <h1>Бюджет — отчёт</h1>
-        <div class="muted">Период: ${periodLabel} · сформировано ${formatDate(today())}</div>`;
+        <div class="hero">
+          <h1>💰 Бюджет — отчёт</h1>
+          <div class="sub">Период: ${periodLabel} · всего операций в выборке: ${tx.length} (доходов ${incomes.length}, расходов ${expenses.length})</div>
+          <div class="kpi">
+            <div><div class="l">Доходы</div><div class="v">${formatMoney(sumInc)}</div></div>
+            <div><div class="l">Расходы</div><div class="v">${formatMoney(sumExp)}</div></div>
+            <div><div class="l">Разница</div><div class="v">${formatMoney(sumInc - sumExp)}</div></div>
+          </div>
+        </div>`;
 
       if (document.getElementById('pdfBal')?.checked) {
-        html += `<h2>Остатки</h2><table>
-          <tr><th>Visa</th><th>MasterCard</th><th>Наличные</th><th>Всего</th></tr>
-          <tr><td class="r">${formatMoney(bal.visa)}</td><td class="r">${formatMoney(bal.mastercard)}</td>
-          <td class="r">${formatMoney(bal.cash)}</td><td class="r"><b>${formatMoney(total)}</b></td></tr></table>`;
         const openP = getOpenPlannedSum();
-        html += `<p>Предполагаемые (открытые): <b>${formatMoney(openP)}</b> · Останется после: <b>${formatMoney(total - openP)}</b></p>`;
+        html += `<div class="section"><h2>Остатки по счетам</h2>
+          <div class="cards">
+            <div class="card"><div class="l">Visa</div><div class="v">${formatMoney(bal.visa)}</div></div>
+            <div class="card"><div class="l">MasterCard</div><div class="v">${formatMoney(bal.mastercard)}</div></div>
+            <div class="card"><div class="l">Наличные</div><div class="v">${formatMoney(bal.cash)}</div></div>
+          </div>
+          <p style="margin-top:10px">Всего: <b>${formatMoney(total)}</b> · Планы открытые: <b>${formatMoney(openP)}</b> · После планов: <b>${formatMoney(total - openP)}</b></p>
+        </div>`;
       }
 
       if (document.getElementById('pdfSummary')?.checked) {
-        html += `<h2>Итоги периода</h2><table>
-          <tr><th>Доходы</th><th>Расходы</th><th>Разница</th></tr>
-          <tr><td class="r">${formatMoney(sumInc)}</td><td class="r">${formatMoney(sumExp)}</td>
-          <td class="r"><b>${formatMoney(sumInc - sumExp)}</b></td></tr></table>`;
+        html += `<div class="section"><h2>Итоги периода</h2>
+          <table><tr><th>Показатель</th><th class="r">Сумма</th></tr>
+          <tr><td>Доходы (${incomes.length})</td><td class="r">${formatMoney(sumInc)}</td></tr>
+          <tr><td>Расходы (${expenses.length})</td><td class="r">${formatMoney(sumExp)}</td></tr>
+          <tr><td><b>Разница</b></td><td class="r"><b>${formatMoney(sumInc - sumExp)}</b></td></tr>
+          </table></div>`;
       }
 
       if (document.getElementById('pdfExpCats')?.checked) {
-        const by = {};
-        expenses.forEach(t => (t.splits || []).forEach(sp => {
-          const r = getRootCategoryId(sp.categoryId);
-          by[r] = (by[r] || 0) + sp.amount;
-        }));
-        const rows = Object.entries(by).sort((a, b) => b[1] - a[1]);
-        html += `<h2>Расходы по категориям</h2><table><tr><th>Категория</th><th class="r">Сумма</th></tr>`;
-        rows.forEach(([id, sum]) => {
-          const c = getCategory(id);
-          html += `<tr><td>${c ? c.name : '—'}</td><td class="r">${formatMoney(sum)}</td></tr>`;
+        html += `<div class="section"><h2>Расходы по категориям (таблица)</h2><table>
+          <tr><th>Категория</th><th class="r">Сумма</th><th class="r">%</th></tr>`;
+        const expTotal = expCatItems.reduce((s, i) => s + i.value, 0) || 1;
+        expCatItems.forEach(i => {
+          html += `<tr><td>${i.label}</td><td class="r">${formatMoney(i.value)}</td><td class="r">${Math.round(i.value / expTotal * 100)}%</td></tr>`;
         });
-        if (!rows.length) html += `<tr><td colspan="2">Нет данных</td></tr>`;
-        html += `</table>`;
+        if (!expCatItems.length) html += `<tr><td colspan="3" class="empty">Нет расходов за период</td></tr>`;
+        html += `</table></div>`;
       }
 
       if (document.getElementById('pdfIncSrc')?.checked) {
-        const by = {};
-        incomes.forEach(t => { by[t.sourceId] = (by[t.sourceId] || 0) + t.amount; });
-        html += `<h2>Доходы по источникам</h2><table><tr><th>Источник</th><th class="r">Сумма</th></tr>`;
-        Object.entries(by).forEach(([id, sum]) => {
-          const s = state.sources.find(x => x.id === id);
-          html += `<tr><td>${s ? s.name : '—'}</td><td class="r">${formatMoney(sum)}</td></tr>`;
+        html += `<div class="section"><h2>Доходы по источникам (таблица)</h2><table>
+          <tr><th>Источник</th><th class="r">Сумма</th><th class="r">%</th></tr>`;
+        const incTotal = incSrcItems.reduce((s, i) => s + i.value, 0) || 1;
+        incSrcItems.forEach(i => {
+          html += `<tr><td>${i.label}</td><td class="r">${formatMoney(i.value)}</td><td class="r">${Math.round(i.value / incTotal * 100)}%</td></tr>`;
         });
-        if (!Object.keys(by).length) html += `<tr><td colspan="2">Нет данных</td></tr>`;
-        html += `</table>`;
+        if (!incSrcItems.length) html += `<tr><td colspan="3" class="empty">Нет доходов за период</td></tr>`;
+        html += `</table></div>`;
       }
 
       if (document.getElementById('pdfLinked')?.checked) {
         const linked = getLinkedNames();
-        html += `<h2>Совпадающие имена</h2><table><tr><th>Имя</th><th class="r">Приход</th><th class="r">Расход</th><th class="r">Разница</th></tr>`;
+        html += `<div class="section"><h2>Совпадающие имена</h2><table>
+          <tr><th>Имя</th><th class="r">Приход</th><th class="r">Расход</th><th class="r">Разница</th></tr>`;
+        let any = false;
         linked.forEach(item => {
           const inc = incomes.filter(tx => {
             const src = state.sources.find(s => s.id === tx.sourceId);
@@ -4983,35 +5125,105 @@
             if (cat && normalizeName(cat.name) === item.key) exp += sp.amount;
           }));
           if (inc || exp) {
+            any = true;
             html += `<tr><td>${item.displayName}</td><td class="r">${formatMoney(inc)}</td>
               <td class="r">${formatMoney(exp)}</td><td class="r">${formatMoney(inc - exp)}</td></tr>`;
           }
         });
-        html += `</table>`;
+        if (!any) html += `<tr><td colspan="4" class="empty">Нет совпадений с операциями</td></tr>`;
+        html += `</table></div>`;
       }
 
       if (document.getElementById('pdfPlanned')?.checked) {
-        html += `<h2>Предполагаемые траты</h2><table><tr><th>Статус</th><th>Дата</th><th>Описание</th><th class="r">Сумма</th><th class="r">Остаток</th></tr>`;
+        html += `<div class="section"><h2>Предполагаемые траты</h2><table>
+          <tr><th>Статус</th><th>Дата</th><th>Описание</th><th class="r">Сумма</th><th class="r">Остаток</th></tr>`;
         (state.planned || []).forEach(p => {
           const rem = getPlannedRemaining(p);
           const closed = rem <= 0.009;
           const catLabel = (p.splits && p.splits[0]) ? getCategoryLabel(p.splits[0].categoryId) : '—';
-          html += `<tr><td>${closed ? 'закрыта' : 'открыта'}</td><td>${p.date ? formatDate(p.date) : '—'}</td>
+          html += `<tr><td>${closed ? '✓ закрыта' : 'открыта'}</td><td>${p.date ? formatDate(p.date) : '—'}</td>
             <td>${p.note || catLabel}</td><td class="r">${formatMoney(p.amount)}</td><td class="r">${formatMoney(Math.max(0, rem))}</td></tr>`;
         });
-        if (!(state.planned || []).length) html += `<tr><td colspan="5">Нет</td></tr>`;
-        html += `</table>`;
+        if (!(state.planned || []).length) html += `<tr><td colspan="5" class="empty">Нет</td></tr>`;
+        html += `</table></div>`;
+      }
+
+      // Charts (multiple)
+      if (charts.includes('expBars')) {
+        html += pdfBarBlock('График: расходы по категориям', expCatItems.slice(0, 12));
+      }
+      if (charts.includes('incBars')) {
+        html += pdfBarBlock('График: доходы по источникам', incSrcItems.slice(0, 12));
+      }
+      if (charts.includes('top')) {
+        html += pdfBarBlock('График: топ‑10 категорий', expCatItems.slice(0, 10));
+      }
+      if (charts.includes('accounts')) {
+        html += pdfBarBlock('График: структура остатков', [
+          { label: 'Visa', value: Math.max(0, bal.visa), color: '#2563EB' },
+          { label: 'MasterCard', value: Math.max(0, bal.mastercard), color: '#EA580C' },
+          { label: 'Наличные', value: Math.max(0, bal.cash), color: '#16A34A' }
+        ]);
+      }
+      if (charts.includes('months')) {
+        const map = {};
+        incomes.forEach(t => {
+          const k = t.date.slice(0, 7);
+          if (!map[k]) map[k] = { inc: 0, exp: 0 };
+          map[k].inc += t.amount;
+        });
+        expenses.forEach(t => {
+          const k = t.date.slice(0, 7);
+          if (!map[k]) map[k] = { inc: 0, exp: 0 };
+          map[k].exp += t.amount;
+        });
+        const keys = Object.keys(map).sort();
+        html += `<div class="section"><h2>График: доходы vs расходы по месяцам</h2>`;
+        if (!keys.length) html += `<p class="empty">Нет данных</p>`;
+        else {
+          html += `<table><tr><th>Месяц</th><th class="r">Доходы</th><th class="r">Расходы</th><th class="r">Δ</th></tr>`;
+          keys.forEach(k => {
+            html += `<tr><td>${k}</td><td class="r">${formatMoney(map[k].inc)}</td>
+              <td class="r">${formatMoney(map[k].exp)}</td><td class="r">${formatMoney(map[k].inc - map[k].exp)}</td></tr>`;
+          });
+          html += `</table>`;
+        }
+        html += `</div>`;
+      }
+      if (charts.includes('weekday')) {
+        const names = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        const sums = [0,0,0,0,0,0,0], counts = [0,0,0,0,0,0,0];
+        expenses.forEach(tx => {
+          const wd = new Date(tx.date + 'T12:00:00').getDay();
+          sums[wd] += tx.amount; counts[wd] += 1;
+        });
+        const order = [1,2,3,4,5,6,0];
+        const items = order.map(i => ({
+          label: names[i],
+          value: counts[i] ? roundMoney(sums[i] / counts[i]) : 0,
+          color: '#0EA5E9'
+        }));
+        html += pdfBarBlock('График: средний расход по дням недели', items);
+      }
+      if (charts.includes('records')) {
+        const byDay = {};
+        expenses.forEach(tx => { byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount; });
+        const items = Object.entries(byDay).sort((a,b)=>b[1]-a[1]).slice(0,10)
+          .map(([d,v]) => ({ label: formatDate(d), value: roundMoney(v), color: '#F97316' }));
+        html += pdfBarBlock('График: рекордные дни', items);
       }
 
       if (document.getElementById('pdfTx')?.checked) {
-        html += `<h2>Операции</h2><table><tr><th>Дата</th><th>Тип</th><th>Описание</th><th class="r">Сумма</th></tr>`;
+        html += `<div class="section"><h2>Операции (${tx.length})</h2><table>
+          <tr><th>Дата</th><th>Тип</th><th>Описание</th><th class="r">Сумма</th></tr>`;
         tx.slice().sort((a, b) => b.date.localeCompare(a.date)).forEach(t => {
           let desc = '';
           if (t.type === 'income') {
             const s = state.sources.find(x => x.id === t.sourceId);
             desc = s ? s.name : 'Доход';
           } else if (t.type === 'expense') {
-            desc = (t.splits || []).map(sp => getCategoryLabel(sp.categoryId)).join(', ');
+            const splits = t.splits || [];
+            desc = splits.length ? splits.map(sp => getCategoryLabel(sp.categoryId)).join(', ') : 'Расход';
           } else {
             desc = `${accountLabel(t.fromAccount)} → ${accountLabel(t.toAccount)}`;
           }
@@ -5020,34 +5232,12 @@
           const sign = t.type === 'income' ? '+' : t.type === 'expense' ? '−' : '';
           html += `<tr><td>${formatDate(t.date)}</td><td>${typeL}</td><td>${desc}</td><td class="r">${sign}${formatMoney(t.amount)}</td></tr>`;
         });
-        if (!tx.length) html += `<tr><td colspan="4">Нет операций</td></tr>`;
-        html += `</table>`;
+        if (!tx.length) html += `<tr><td colspan="4" class="empty">Нет операций (проверьте период и что данные сохранены)</td></tr>`;
+        html += `</table></div>`;
       }
 
-      if (document.getElementById('pdfCurious')?.checked) {
-        const names = {
-          balance: 'Динамика баланса', months: 'Доходы vs расходы', top: 'Топ категорий',
-          weekday: 'По дням недели', cumulative: 'Накопительные', frequency: 'Частота',
-          avgcheck: 'Средний чек', compare: 'Сравнение категорий', heatmap: 'Календарь',
-          records: 'Рекордные дни', forecast: 'Прогноз'
-        };
-        html += `<h2>Любопытная статистика: ${names[curiousType] || curiousType}</h2>`;
-        html += `<p class="muted">См. приложение / экран статистики для графика. Тип: ${curiousType}.</p>`;
-        if (curiousType === 'top' || curiousType === 'compare') {
-          const by = {};
-          expenses.forEach(t => (t.splits || []).forEach(sp => {
-            const r = getRootCategoryId(sp.categoryId);
-            by[r] = (by[r] || 0) + sp.amount;
-          }));
-          html += `<table><tr><th>Категория</th><th class="r">Сумма</th></tr>`;
-          Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 15).forEach(([id, sum]) => {
-            html += `<tr><td>${getCategory(id)?.name || '—'}</td><td class="r">${formatMoney(sum)}</td></tr>`;
-          });
-          html += `</table>`;
-        }
-      }
+      html += `<div class="footer">Сформировано ${formatDate(today())} · приложение «Бюджет» · в печати: «Сохранить как PDF»</div></body></html>`;
 
-      html += `</body></html>`;
       const w = window.open('', '_blank');
       if (!w) {
         toast('Разрешите всплывающие окна для экспорта');
@@ -5055,7 +5245,8 @@
       }
       w.document.write(html);
       w.document.close();
-      setTimeout(() => { w.focus(); w.print(); }, 300);
+      setTimeout(() => { w.focus(); w.print(); }, 400);
+      toast('Откройте «Сохранить как PDF» в печати');
       toast('Откройте «Сохранить как PDF» в печати');
     }
 
