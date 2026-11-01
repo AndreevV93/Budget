@@ -5179,6 +5179,73 @@
         });
       });
 
+      document.getElementById('histSearch')?.addEventListener('input', e => {
+        state.histSearch = e.target.value;
+        state.histPage = 1;
+        renderHistory();
+      });
+      document.querySelectorAll('#histQuickChips .quick-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const v = chip.dataset.histQuick;
+          state.histQuick = state.histQuick === v ? null : v;
+          state.histPage = 1;
+          renderHistory();
+        });
+      });
+      document.querySelectorAll('#expenseSubTabs .sub-tab').forEach(tab => {
+        tab.addEventListener('click', () => setExpenseTab(tab.dataset.expTab));
+      });
+      document.getElementById('btnToggleCharts')?.addEventListener('click', () => {
+        const box = document.getElementById('statsChartsBlock');
+        const btn = document.getElementById('btnToggleCharts');
+        if (!box) return;
+        const show = box.classList.contains('charts-hidden');
+        box.classList.toggle('charts-hidden', !show);
+        if (btn) btn.textContent = show ? 'Скрыть диаграммы' : 'Показать диаграммы';
+        if (show) renderStats();
+      });
+      document.getElementById('btnStatsLikeHistory')?.addEventListener('click', () => {
+        state.period = state.histPeriod === 'range' ? 'range' : (state.histPeriod || 'month');
+        if (state.period === 'range') {
+          state.dateFrom = state.histDateFrom;
+          state.dateTo = state.histDateTo;
+        }
+        document.querySelectorAll('#screen-stats > .period-tabs .period-tab').forEach(t => {
+          t.classList.toggle('active', t.dataset.period === state.period);
+        });
+        document.getElementById('dateRange')?.classList.toggle('show', state.period === 'range');
+        if (state.period === 'range') {
+          const df = document.getElementById('dateFrom');
+          const dt = document.getElementById('dateTo');
+          if (df) df.value = state.dateFrom || '';
+          if (dt) dt.value = state.dateTo || '';
+        }
+        renderStats();
+        toast('Период статистики как в истории');
+      });
+      document.addEventListener('click', e => {
+        const tip = e.target.closest('.help-tip');
+        if (tip) {
+          e.preventDefault();
+          showHelp(tip.dataset.help);
+          return;
+        }
+        const dismiss = e.target.closest('[data-coach-dismiss]');
+        if (dismiss) {
+          e.preventDefault();
+          dismissCoach(dismiss.getAttribute('data-coach-dismiss'));
+          return;
+        }
+      });
+      // прямая привязка на контейнер подсказки (на случай всплытия)
+      document.getElementById('coachToast')?.addEventListener('click', e => {
+        const btn = e.target.closest('[data-coach-dismiss]');
+        if (btn) {
+          e.preventDefault();
+          dismissCoach(btn.getAttribute('data-coach-dismiss'));
+        }
+      });
+
       document.getElementById('btnClearFilters').addEventListener('click', () => {
         state.statsFilterCats = [];
         state.statsFilterSources = [];
