@@ -1735,10 +1735,7 @@
           <option value="every30">Раз в 30 дней</option>
           <option value="monthDay">Определённого числа месяца</option>
         </select>
-      </div>
-      <div class="form-group hidden" id="autopayMonthDayWrap">
-        <label>Число месяца (1–31)</label>
-        <input type="number" id="autopayMonthDay" min="1" max="31" value="1">
+        <p class="text-sm text-muted" id="autopayMonthDayHint" style="margin-top:6px;display:none">Число месяца берётся из первой даты списания</p>
       </div>
       <div class="form-group">
         <label>Первый день списания</label>
@@ -1749,6 +1746,7 @@
         <input type="text" id="autopayNote" placeholder="Например: интернет">
       </div>
       <button class="btn btn-secondary" id="btnAddAutopay" style="width:100%">Добавить автооплату</button>
+      <button class="btn btn-ghost hidden" id="btnCancelAutopayEdit" style="width:100%;margin-top:8px">Отмена редактирования</button>
       <div class="mt-2" id="autopayList"></div>
       <div class="empty-state hidden" id="autopayListEmpty">Нет автооплат</div>
     </div>
@@ -4361,7 +4359,9 @@
       if (rule.frequency === 'weekly') return diff % 7 === 0;
       if (rule.frequency === 'every30') return diff % 30 === 0;
       if (rule.frequency === 'monthDay') {
-        const day = Math.min(31, Math.max(1, parseInt(rule.monthDay, 10) || 1));
+        // число месяца = день из первой даты списания
+        const fromStart = parseInt((rule.startDate || '').split('-')[2], 10);
+        const day = Math.min(31, Math.max(1, parseInt(rule.monthDay, 10) || fromStart || 1));
         const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
         return d.getDate() === Math.min(day, last);
       }
@@ -4452,6 +4452,60 @@
       sel.innerHTML = buildCategoryOptions(cur);
     }
 
+    let editingAutopayId = null;
+
+    function getAutopayMonthDay(rule) {
+      if (rule.monthDay) return parseInt(rule.monthDay, 10);
+      return parseInt((rule.startDate || '').split('-')[2], 10) || 1;
+    }
+
+    function resetAutopayForm() {
+      editingAutopayId = null;
+      document.getElementById('autopayAmount').value = '';
+      document.getElementById('autopayNote').value = '';
+      document.getElementById('autopayStart').value = today();
+      document.getElementById('autopayFreq').value = 'daily';
+      document.getElementById('autopayMonthDayHint').style.display = 'none';
+      document.getElementById('btnAddAutopay').textContent = 'Добавить автооплату';
+      document.getElementById('btnCancelAutopayEdit').classList.add('hidden');
+      const visa = document.querySelector('input[name="autopayAccount"][value="visa"]');
+      if (visa) {
+        visa.checked = true;
+        document.querySelectorAll('#autopayAccountToggle .account-option').forEach(o => {
+          o.classList.toggle('active', o.dataset.account === 'visa');
+        });
+      }
+      fillAutopayCategorySelect();
+    }
+
+    function startEditAutopay(id) {
+      const r = (state.autopay || []).find(x => x.id === id);
+      if (!r) return toast('Правило не найдено');
+      editingAutopayId = id;
+      document.getElementById('autopayAmount').value = r.amount;
+      document.getElementById('autopayNote').value = r.note || '';
+      document.getElementById('autopayStart').value = r.startDate || today();
+      document.getElementById('autopayFreq').value = r.frequency || 'daily';
+      document.getElementById('autopayMonthDayHint').style.display =
+        (r.frequency === 'monthDay') ? 'block' : 'none';
+      const acc = normalizeAccount(r.account);
+      document.querySelectorAll('input[name="autopayAccount"]').forEach(inp => {
+        inp.checked = inp.value === acc;
+      });
+      document.querySelectorAll('#autopayAccountToggle .account-option').forEach(o => {
+        o.classList.toggle('active', o.dataset.account === acc);
+      });
+      fillAutopayCategorySelect();
+      const sel = document.getElementById('autopayCategory');
+      if (sel) {
+        sel.innerHTML = buildCategoryOptions(r.categoryId);
+        sel.value = r.categoryId;
+      }
+      document.getElementById('btnAddAutopay').textContent = 'Сохранить изменения';
+      document.getElementById('btnCancelAutopayEdit').classList.remove('hidden');
+      document.getElementById('autopayAmount').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     function renderAutopayList() {
       const list = document.getElementById('autopayList');
       const empty = document.getElementById('autopayListEmpty');
@@ -4466,11 +4520,12 @@
       list.innerHTML = items.map(r => {
         const cat = getCategoryLabel(r.categoryId);
         const next = nextAutopayDates(r, today(), 60)[0];
+        const md = r.frequency === 'monthDay' ? getAutopayMonthDay(r) : null;
         return `<div class="planned-item" data-autopay-id="${r.id}">
           <div class="pi-head">
             <div>
               <div class="pi-title">${cat} · ${formatMoney(r.amount)}</div>
-              <div class="pi-meta">${freqLabel(r.frequency)}${r.frequency === 'monthDay' ? ' (' + (r.monthDay || 1) + ')' : ''}
+              <div class="pi-meta">${freqLabel(r.frequency)}${md ? ' (' + md + '-го)' : ''}
                 · ${accountLabel(r.account)} · с ${formatDate(r.startDate)}
                 ${next ? ' · след. ' + formatDate(next) : ''}
               </div>
@@ -4478,7 +4533,8 @@
             </div>
             <span class="pi-badge">${r.active === false ? 'выкл' : 'активна'}</span>
           </div>
-          <div style="margin-top:8px;display:flex;gap:6px">
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" class="btn btn-ghost btn-sm autopay-edit" data-id="${r.id}" style="flex:1">Изменить</button>
             <button type="button" class="btn btn-ghost btn-sm autopay-toggle" data-id="${r.id}" style="flex:1">${r.active === false ? 'Включить' : 'Выключить'}</button>
             <button type="button" class="btn btn-ghost btn-sm autopay-del" data-id="${r.id}" style="flex:1">Удалить</button>
           </div>
@@ -5139,51 +5195,83 @@
       });
 
       document.getElementById('autopayFreq').addEventListener('change', e => {
-        document.getElementById('autopayMonthDayWrap').classList.toggle('hidden', e.target.value !== 'monthDay');
+        document.getElementById('autopayMonthDayHint').style.display =
+          e.target.value === 'monthDay' ? 'block' : 'none';
       });
       if (document.getElementById('autopayStart') && !document.getElementById('autopayStart').value) {
         document.getElementById('autopayStart').value = today();
       }
+      document.getElementById('btnCancelAutopayEdit').addEventListener('click', () => {
+        resetAutopayForm();
+        toast('Редактирование отменено');
+      });
       document.getElementById('btnAddAutopay').addEventListener('click', () => {
         const amount = roundMoney(document.getElementById('autopayAmount').value);
         const categoryId = document.getElementById('autopayCategory').value;
         const account = normalizeAccount(document.querySelector('input[name="autopayAccount"]:checked')?.value || 'visa');
         const frequency = document.getElementById('autopayFreq').value;
-        const monthDay = parseInt(document.getElementById('autopayMonthDay').value, 10) || 1;
         const startDate = document.getElementById('autopayStart').value;
         const note = document.getElementById('autopayNote').value.trim();
         if (!amount || amount <= 0) return toast('Введите сумму');
         if (!categoryId) return toast('Выберите категорию');
         if (!startDate) return toast('Укажите первый день списания');
+        const monthDay = frequency === 'monthDay'
+          ? (parseInt(startDate.split('-')[2], 10) || 1)
+          : undefined;
         state.autopay = state.autopay || [];
-        state.autopay.push({
-          id: uid(),
-          amount,
-          categoryId,
-          account,
-          frequency,
-          monthDay: frequency === 'monthDay' ? monthDay : undefined,
-          startDate,
-          note: note || undefined,
-          active: true
-        });
-        saveState();
-        processAutopays();
-        document.getElementById('autopayAmount').value = '';
-        document.getElementById('autopayNote').value = '';
-        renderAutopayList();
-        renderPlannedList();
-        renderExpenseList();
-        renderHistory();
-        renderAccountBalances();
-        toast('Автооплата добавлена');
+        if (editingAutopayId) {
+          const r = state.autopay.find(x => x.id === editingAutopayId);
+          if (!r) return toast('Правило не найдено');
+          r.amount = amount;
+          r.categoryId = categoryId;
+          r.account = account;
+          r.frequency = frequency;
+          r.monthDay = monthDay;
+          r.startDate = startDate;
+          r.note = note || undefined;
+          saveState();
+          processAutopays();
+          resetAutopayForm();
+          renderAutopayList();
+          renderPlannedList();
+          renderExpenseList();
+          renderHistory();
+          renderAccountBalances();
+          toast('Автооплата обновлена');
+        } else {
+          state.autopay.push({
+            id: uid(),
+            amount,
+            categoryId,
+            account,
+            frequency,
+            monthDay,
+            startDate,
+            note: note || undefined,
+            active: true
+          });
+          saveState();
+          processAutopays();
+          resetAutopayForm();
+          renderAutopayList();
+          renderPlannedList();
+          renderExpenseList();
+          renderHistory();
+          renderAccountBalances();
+          toast('Автооплата добавлена');
+        }
       });
 
       document.addEventListener('click', e => {
+        if (e.target.closest('.autopay-edit')) {
+          startEditAutopay(e.target.closest('.autopay-edit').dataset.id);
+          return;
+        }
         if (e.target.closest('.autopay-del')) {
           const id = e.target.closest('.autopay-del').dataset.id;
           if (confirm('Удалить правило автооплаты? Уже созданные операции останутся.')) {
             state.autopay = (state.autopay || []).filter(r => r.id !== id);
+            if (editingAutopayId === id) resetAutopayForm();
             saveState();
             renderAutopayList();
             renderPlannedList();
