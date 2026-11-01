@@ -1365,6 +1365,128 @@
       flex-shrink: 0;
       white-space: nowrap;
     }
+
+    .sub-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+    }
+    .sub-tab {
+      flex: 1;
+      min-width: 64px;
+      border: 1.5px solid var(--border);
+      background: #fff;
+      border-radius: 999px;
+      padding: 8px 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--text-secondary);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .sub-tab.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .expense-panel { display: none; }
+    .expense-panel.active { display: block; }
+    .nav-badge {
+      position: absolute;
+      top: 2px;
+      right: calc(50% - 22px);
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 999px;
+      background: #DC2626;
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      line-height: 16px;
+      text-align: center;
+    }
+    .nav-item { position: relative; }
+    .help-tip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      font-size: 0.7rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-left: 6px;
+      vertical-align: middle;
+      border: none;
+      font-family: inherit;
+    }
+    .coach-toast {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: calc(72px + var(--safe-bottom));
+      background: #1c1917;
+      color: #fff;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      z-index: 180;
+      display: none;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+    .coach-toast.show { display: block; }
+    .coach-toast button {
+      margin-top: 8px;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .hist-search {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: inherit;
+      margin-bottom: 10px;
+      background: #fff;
+    }
+    .quick-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .quick-chip {
+      border: 1.5px solid var(--border);
+      background: #fff;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .quick-chip.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary-dark);
+    }
+    #statsChartsBlock.charts-hidden .stats-chart-card { display: none; }
+
   </style>
 </head>
 <body>
@@ -1480,6 +1602,9 @@
       <input type="date" id="dateFrom">
       <input type="date" id="dateTo">
     </div>
+    <button type="button" class="btn btn-ghost btn-sm" id="btnStatsLikeHistory" style="width:100%;margin-bottom:10px">Как в истории</button>
+    <button type="button" class="btn btn-secondary" id="btnToggleCharts" style="width:100%;margin-bottom:12px">Показать диаграммы</button>
+    <div id="statsChartsBlock" class="charts-hidden">
 
     <div class="card collapsible-card" style="margin-bottom:12px;padding:12px 14px" data-collapse-key="filters">
       <div class="card-title collapsible-head" style="margin-bottom:4px">Фильтр операций <span class="collapse-chev">▼</span></div>
@@ -1516,7 +1641,7 @@
       <button type="button" class="btn btn-ghost" id="btnExpandAll">Развернуть разделы</button>
     </div>
 
-    <div class="card collapsible-card" id="linkedAnalysisCard" data-collapse-key="linked">
+    <div class="card collapsible-card stats-chart-card" id="linkedAnalysisCard" data-collapse-key="linked">
       <div class="card-title collapsible-head">Одинаковые имена: приход − расход <span class="collapse-chev">▼</span></div>
       <div class="collapsible-body">
         <p class="text-sm text-muted mb-2">Если источник дохода и категория расхода называются одинаково (например «Мама»), цвет общий, а здесь — разница за период.</p>
@@ -1525,7 +1650,7 @@
       </div>
     </div>
 
-    <div class="card collapsible-card" data-collapse-key="expense-chart">
+    <div class="card collapsible-card stats-chart-card" data-collapse-key="expense-chart">
       <div class="card-title collapsible-head">Расходы по категориям <span class="collapse-chev">▼</span></div>
       <div class="collapsible-body">
         <p class="text-sm text-muted mb-2">Нажмите на категорию в списке — раскроются подкатегории. На сегмент графика — то же.</p>
@@ -1540,7 +1665,7 @@
       </div>
     </div>
 
-    <div class="card collapsible-card" data-collapse-key="income-chart">
+    <div class="card collapsible-card stats-chart-card" data-collapse-key="income-chart">
       <div class="card-title collapsible-head">Доходы по источникам <span class="collapse-chev">▼</span></div>
       <div class="collapsible-body">
         <div class="chart-container">
@@ -1553,7 +1678,7 @@
       </div>
     </div>
 
-    <div class="card collapsible-card" data-collapse-key="curious">
+    <div class="card collapsible-card stats-chart-card" data-collapse-key="curious">
       <div class="card-title collapsible-head">Любопытная статистика <span class="collapse-chev">▼</span></div>
       <div class="collapsible-body">
         <div class="form-group">
@@ -1600,6 +1725,8 @@
       </div>
     </div>
   </div>
+
+  </div><!-- /statsChartsBlock -->
 
   <!-- SCREEN: Income -->
   <div class="screen" id="screen-income">
@@ -1651,8 +1778,16 @@
   </div>
 
   <!-- SCREEN: Expenses -->
+
   <div class="screen" id="screen-expense">
-    <div class="card">
+    <div class="sub-tabs" id="expenseSubTabs">
+      <button type="button" class="sub-tab active" data-exp-tab="new">Новый</button>
+      <button type="button" class="sub-tab" data-exp-tab="list">Список</button>
+      <button type="button" class="sub-tab" data-exp-tab="planned">Планы</button>
+      <button type="button" class="sub-tab" data-exp-tab="auto">Авто</button>
+    </div>
+    <div class="expense-panel active" id="expPanel-new">
+<div class="card">
       <div class="card-title" id="expenseFormTitle">Добавить расход</div>
       <div class="form-group">
         <label>Откуда списать</label>
@@ -1691,7 +1826,7 @@
         <input type="text" id="expenseNote" placeholder="Например: продукты">
       </div>
 
-      <div class="card-title" style="margin-top:14px">Погашение предполагаемых</div>
+      <div class="card-title" style="margin-top:14px">Погашение предполагаемых <button type="button" class="help-tip" data-help="alloc">?</button></div>
       <p class="text-sm text-muted mb-2">Можно погасить <b>частью</b> расхода. Сумма — сколько из этого чека идёт в план. Галочка «полное погашение» закрывает план даже если суммы не совпадают.</p>
       <div class="alloc-list" id="expenseAllocList"></div>
 
@@ -1699,8 +1834,11 @@
       <button class="btn btn-ghost hidden" id="btnCancelExpenseEdit" style="width:100%;margin-top:8px">Отмена редактирования</button>
     </div>
 
-    <div class="card">
-      <div class="card-title">Автооплата</div>
+        </div>
+
+    <div class="expense-panel" id="expPanel-auto">
+<div class="card">
+      <div class="card-title">Автооплата <button type="button" class="help-tip" data-help="autopay">?</button></div>
       <p class="text-sm text-muted mb-2">Регулярные списания. В день оплаты списываются сами; при нехватке денег — ошибка в истории.</p>
       <div class="form-group">
         <label>Сумма (Br)</label>
@@ -1751,8 +1889,11 @@
       <div class="empty-state hidden" id="autopayListEmpty">Нет автооплат</div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Предполагаемые траты</div>
+        </div>
+
+    <div class="expense-panel" id="expPanel-planned">
+<div class="card">
+      <div class="card-title">Предполагаемые траты <button type="button" class="help-tip" data-help="planned">?</button></div>
       <p class="text-sm text-muted mb-2">Не вычитаются из счетов, пока не погасите. Ближайшие автооплаты (≤15 дней) появляются здесь сами. Без даты — тоже показываются.</p>
       <div class="form-group">
         <label>Учитывать планы только до даты (пусто = без ограничения)</label>
@@ -1780,15 +1921,24 @@
       <div class="empty-state hidden" id="plannedListEmpty">Нет предполагаемых трат</div>
     </div>
 
-    <div class="card">
+        </div>
+
+    <div class="expense-panel" id="expPanel-list">
+<div class="card">
       <div class="card-title">Последние расходы</div>
       <div class="tx-list" id="expenseList"></div>
       <div class="empty-state hidden" id="expenseListEmpty">Пока нет расходов</div>
     </div>
+    </div>
   </div>
 
-  <!-- SCREEN: History -->
   <div class="screen" id="screen-history">
+    <input type="search" class="hist-search" id="histSearch" placeholder="Поиск: заметка, категория, сумма…">
+    <div class="quick-chips" id="histQuickChips">
+      <button type="button" class="quick-chip" data-hist-quick="today">Сегодня</button>
+      <button type="button" class="quick-chip" data-hist-quick="week">Неделя</button>
+      <button type="button" class="quick-chip" data-hist-quick="autoerr">Ошибки авто</button>
+    </div>
     <div class="period-tabs" id="historyTypeTabs">
       <button class="period-tab active" data-hist-type="all">Все</button>
       <button class="period-tab" data-hist-type="income">Пополнения</button>
@@ -1909,6 +2059,8 @@
   </div>
 
   <!-- Bottom Navigation -->
+  <div class="coach-toast" id="coachToast"></div>
+
   <nav class="bottom-nav">
     <button class="nav-item active" data-screen="stats">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
@@ -1925,6 +2077,7 @@
     <button class="nav-item" data-screen="history">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
       История
+      <span class="nav-badge hidden" id="navHistBadge">0</span>
     </button>
     <button class="nav-item" data-screen="settings">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -2128,7 +2281,9 @@
       histPageSize: 10,
       histPage: 1,
       statsFilterCats: [],
-      statsFilterSources: []
+      statsFilterSources: [],
+      histSearch: '',
+      histQuick: null
     };
 
     let syncConfig = { binId: '', masterKey: '', lastSync: null };
@@ -2945,6 +3100,7 @@
       if (name === 'income') { renderIncomeList(); fillSourceSelect(); }
       if (name === 'expense') {
         processAutopays();
+        setExpenseTab(document.querySelector('#expenseSubTabs .sub-tab.active')?.dataset.expTab || 'new');
         renderExpenseList();
         refreshSplitCategorySelects();
         fillPlannedCategorySelect();
@@ -2953,6 +3109,7 @@
         renderPlannedList();
         renderExpenseAllocList();
         if (!document.querySelector('#splitsList .split-row')) addSplitRow();
+        showCoach('alloc_once', '💡 Галочка «полное погашение» закрывает план даже если сумма расхода другая.');
       }
       if (name === 'history') renderHistory();
       if (name === 'settings') {
@@ -4052,6 +4209,64 @@
       return `${day}.${m}.${y}`;
     }
 
+    // ========== UX HELPERS ==========
+    function countAutopayErrors() {
+      return state.transactions.filter(t => t.type === 'expense' && t.autopayStatus === 'error').length;
+    }
+
+    function updateNavBadge() {
+      const badge = document.getElementById('navHistBadge');
+      if (!badge) return;
+      const n = countAutopayErrors();
+      if (n > 0) {
+        badge.textContent = n > 99 ? '99+' : String(n);
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function setExpenseTab(name) {
+      document.querySelectorAll('#expenseSubTabs .sub-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.expTab === name);
+      });
+      document.querySelectorAll('.expense-panel').forEach(p => {
+        p.classList.toggle('active', p.id === 'expPanel-' + name);
+      });
+      if (name === 'list') renderExpenseList();
+      if (name === 'planned') renderPlannedList();
+      if (name === 'auto') { fillAutopayCategorySelect(); renderAutopayList(); }
+      if (name === 'new') {
+        refreshSplitCategorySelects();
+        renderExpenseAllocList();
+      }
+    }
+
+    function showCoach(key, html) {
+      try {
+        if (localStorage.getItem('coach_' + key) === '1') return;
+      } catch (e) {}
+      const el = document.getElementById('coachToast');
+      if (!el) return;
+      el.innerHTML = html + '<br><button type="button" data-coach-dismiss="' + key + '">Понятно</button>';
+      el.classList.add('show');
+    }
+
+    function dismissCoach(key) {
+      try { localStorage.setItem('coach_' + key, '1'); } catch (e) {}
+      const el = document.getElementById('coachToast');
+      if (el) el.classList.remove('show');
+    }
+
+    function showHelp(kind) {
+      const map = {
+        autopay: 'Автооплата сама создаёт расход в нужный день с выбранного счёта. Если денег мало — в истории будет ошибка, баланс не тронется. Потом можно нажать ✓ и погасить вручную.',
+        planned: 'Предполагаемые траты не списывают деньги. Они показывают, сколько останется после будущих трат. Ближайшие автооплаты (до 15 дней) появляются здесь сами. Без даты — тоже видны.',
+        alloc: 'Можно погасить план частью расхода. Галочка «полное погашение» закрывает план даже если суммы не совпадают.'
+      };
+      toast(map[kind] || 'Справка');
+    }
+
     // ========== HISTORY ==========
     function getHistoryDateRange() {
       if (state.histPeriod === 'all') return { from: null, to: null };
@@ -4064,19 +4279,69 @@
       };
     }
 
+    function weekAgo() {
+      const d = new Date();
+      d.setDate(d.getDate() - 7);
+      return localISODate(d);
+    }
+
     function filterHistoryTx() {
-      const { from, to } = getHistoryDateRange();
+      let from = null, to = null;
+      if (state.histQuick === 'today') {
+        from = to = today();
+      } else if (state.histQuick === 'week') {
+        from = weekAgo();
+        to = today();
+      } else {
+        const r = getHistoryDateRange();
+        from = r.from;
+        to = r.to;
+      }
+      const q = (state.histSearch || '').trim().toLowerCase();
       return state.transactions.filter(tx => {
-        if (state.histType === 'income' && tx.type !== 'income') return false;
-        if (state.histType === 'expense' && tx.type !== 'expense') return false;
-        if (state.histType === 'transfer' && tx.type !== 'transfer') return false;
-        if (from && tx.date < from) return false;
-        if (to && tx.date > to) return false;
+        if (state.histQuick === 'autoerr') {
+          if (!(tx.type === 'expense' && tx.autopayStatus === 'error')) return false;
+        } else {
+          if (state.histType === 'income' && tx.type !== 'income') return false;
+          if (state.histType === 'expense' && tx.type !== 'expense') return false;
+          if (state.histType === 'transfer' && tx.type !== 'transfer') return false;
+          if (from && tx.date < from) return false;
+          if (to && tx.date > to) return false;
+        }
+        if (q) {
+          const parts = [];
+          if (tx.note) parts.push(tx.note);
+          if (tx.amount != null) parts.push(String(tx.amount));
+          if (tx.type === 'expense') {
+            (tx.splits || []).forEach(sp => {
+              parts.push(getCategoryLabel(sp.categoryId));
+              if (sp.note) parts.push(sp.note);
+            });
+            if (tx.autopayStatus === 'error') parts.push('ошибка автооплаты');
+          }
+          if (tx.type === 'income') {
+            const src = state.sources.find(s => s.id === tx.sourceId);
+            if (src) parts.push(src.name);
+          }
+          if (tx.type === 'transfer') {
+            parts.push(accountLabel(tx.fromAccount), accountLabel(tx.toAccount));
+          }
+          const hay = parts.join(' ').toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
         return true;
       }).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
     }
 
     function renderHistory() {
+      updateNavBadge();
+      document.querySelectorAll('#histQuickChips .quick-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.histQuick === state.histQuick);
+      });
+      const searchEl = document.getElementById('histSearch');
+      if (searchEl && searchEl.value !== (state.histSearch || '')) {
+        searchEl.value = state.histSearch || '';
+      }
       const items = filterHistoryTx();
       const list = document.getElementById('historyList');
       const empty = document.getElementById('historyEmpty');
@@ -4824,6 +5089,7 @@
       const navExp = document.querySelector('.nav-item[data-screen="expense"]');
       if (navExp) navExp.classList.add('active');
       document.getElementById('screen-expense').classList.add('active');
+      setExpenseTab('new');
       renderExpenseList();
       window.scrollTo(0, 0);
     }
@@ -6021,6 +6287,7 @@
 
     function renderAll() {
       processAutopays();
+      updateNavBadge();
       renderStats();
       renderAccountBalances();
       renderAutopayList();
