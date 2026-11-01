@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#0D9488">
+  <meta name="theme-color" content="#D97706">
   <title>Бюджет — учёт финансов</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,17 +11,17 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --primary: #0D9488;
-      --primary-dark: #0F766E;
-      --primary-light: #CCFBF1;
+      --primary: #D97706;
+      --primary-dark: #B45309;
+      --primary-light: #FFEDD5;
       --income: #16A34A;
       --expense: #DC2626;
-      --bg: #F0FDFA;
+      --bg: #FFFBEB;
       --card: #FFFFFF;
-      --text: #134E4A;
-      --text-muted: #5EEAD4;
-      --text-secondary: #64748B;
-      --border: #E2E8F0;
+      --text: #78350F;
+      --text-muted: #FBBF24;
+      --text-secondary: #78716C;
+      --border: #FDE68A;
       --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
       --radius: 16px;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -45,45 +45,107 @@
 
     /* Header */
     .header {
-      background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%);
+      background: linear-gradient(145deg, #B45309 0%, #D97706 48%, #F59E0B 100%);
       color: white;
-      padding: 16px 20px 20px;
+      padding: 14px 16px 18px;
       position: sticky;
       top: 0;
       z-index: 50;
-      box-shadow: 0 2px 12px rgba(13, 148, 136, 0.3);
+      box-shadow: 0 8px 24px rgba(217, 119, 6, 0.28);
+      overflow: hidden;
     }
-
-    .header h1 {
-      font-size: 1.35rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
+    .header::before {
+      content: '';
+      position: absolute;
+      top: -40%;
+      right: -12%;
+      width: 180px;
+      height: 180px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      pointer-events: none;
     }
-
-    .header-sub {
-      font-size: 0.8rem;
-      opacity: 0.85;
-      margin-top: 2px;
+    .header::after {
+      content: '';
+      position: absolute;
+      bottom: -50%;
+      left: 20%;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+      pointer-events: none;
     }
-
-    .sync-status {
+    .header-inner {
+      position: relative;
+      z-index: 1;
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 0.75rem;
-      margin-top: 8px;
-      opacity: 0.9;
+      justify-content: space-between;
+      gap: 12px;
     }
-
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .header-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      flex-shrink: 0;
+      backdrop-filter: blur(6px);
+    }
+    .header-text { min-width: 0; }
+    .header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+    }
+    .header-sub {
+      font-size: 0.72rem;
+      opacity: 0.88;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sync-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.18);
+      border: 1px solid rgba(255,255,255,0.2);
+      flex-shrink: 0;
+      max-width: 42%;
+    }
+    .sync-status #syncText {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .sync-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
       background: #A7F3D0;
+      box-shadow: 0 0 0 3px rgba(167, 243, 208, 0.25);
+      flex-shrink: 0;
     }
-
-    .sync-dot.syncing { background: #FCD34D; animation: pulse 1s infinite; }
-    .sync-dot.error { background: #FCA5A5; }
+    .sync-dot.syncing { background: #FCD34D; box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.3); animation: pulse 1s infinite; }
+    .sync-dot.error { background: #FCA5A5; box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.3); }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
@@ -492,16 +554,18 @@
     .tx-icon {
       width: 40px;
       height: 40px;
-      border-radius: 12px;
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.1rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      line-height: 1;
       flex-shrink: 0;
     }
 
-    .tx-icon.income { background: #DCFCE7; }
-    .tx-icon.expense { background: #FEE2E2; }
+    .tx-icon.income { background: #DCFCE7; color: #16A34A; }
+    .tx-icon.expense { background: #FEE2E2; color: #DC2626; }
 
     .tx-info {
       flex: 1;
@@ -1185,11 +1249,18 @@
 </head>
 <body>
   <header class="header">
-    <h1>💰 Бюджет</h1>
-    <div class="header-sub">Личный учёт финансов</div>
-    <div class="sync-status" id="syncStatus">
-      <span class="sync-dot" id="syncDot"></span>
-      <span id="syncText">Локально</span>
+    <div class="header-inner">
+      <div class="header-brand">
+        <div class="header-logo" aria-hidden="true">💰</div>
+        <div class="header-text">
+          <h1>Бюджет</h1>
+          <div class="header-sub">Личный учёт · Br</div>
+        </div>
+      </div>
+      <div class="sync-status" id="syncStatus" title="Статус синхронизации">
+        <span class="sync-dot" id="syncDot"></span>
+        <span id="syncText">Локально</span>
+      </div>
     </div>
   </header>
 
@@ -2312,7 +2383,7 @@
           state.categories.forEach(c => {
             if (c.parentId === undefined) c.parentId = null;
           });
-          const fallbackSrcColors = ['#16A34A', '#EC4899', '#8B5CF6', '#0D9488', '#F59E0B', '#3B82F6'];
+          const fallbackSrcColors = ['#16A34A', '#EC4899', '#8B5CF6', '#D97706', '#F59E0B', '#3B82F6'];
           state.sources.forEach((s, i) => {
             if (!s.color) s.color = fallbackSrcColors[i % fallbackSrcColors.length];
           });
@@ -2991,7 +3062,7 @@
             datasets: [{
               label: 'Баланс',
               data,
-              borderColor: '#4F46E5',
+              borderColor: '#D97706',
               backgroundColor: 'rgba(79,70,229,0.12)',
               fill: true,
               tension: 0.25,
@@ -3590,7 +3661,7 @@
         const src = state.sources.find(s => s.id === tx.sourceId);
         const accIcon = accountEmoji(tx.account);
         return `<div class="tx-item">
-          <div class="tx-icon income">↑</div>
+          <div class="tx-icon income">+</div>
           <div class="tx-info">
             <div class="tx-title">${src ? src.name : '—'}${tx.note ? ' · ' + tx.note : ''}</div>
             <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}</div>
@@ -3654,7 +3725,7 @@
       return `
         <div class="d-row"><span>Откуда</span><strong>${accountLabel(tx.fromAccount)}</strong></div>
         <div class="d-row"><span>Куда</span><strong>${accountLabel(tx.toAccount)}</strong></div>
-        <div class="d-row"><span>Сумма</span><strong style="color:#4F46E5">${formatMoney(tx.amount)}</strong></div>
+        <div class="d-row"><span>Сумма</span><strong style="color:#D97706">${formatMoney(tx.amount)}</strong></div>
         <div class="d-row"><span>Заметка</span><strong>${tx.note ? tx.note : '—'}</strong></div>
       `;
     }
@@ -3691,7 +3762,7 @@
           : '';
         return `<div class="tx-wrap" data-tx-id="${tx.id}">
           <div class="tx-item clickable" data-expand="1">
-            <div class="tx-icon expense">↓</div>
+            <div class="tx-icon expense">−</div>
             <div class="tx-info">
               <div class="tx-title">${splitsText}${tx.note ? ' · ' + tx.note : ''}${allocNote}</div>
               <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}</div>
@@ -3785,14 +3856,14 @@
               <div class="tx-title">${title}</div>
               <div class="tx-meta">${formatDate(tx.date)} · ${accountEmoji(tx.fromAccount)}→${accountEmoji(tx.toAccount)}</div>
             </div>
-            <div class="tx-amount" style="color:#4F46E5">${formatMoney(tx.amount)}</div>
+            <div class="tx-amount" style="color:#D97706">${formatMoney(tx.amount)}</div>
             <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>`;
         } else if (tx.type === 'income') {
           const src = state.sources.find(s => s.id === tx.sourceId);
           const title = (src ? src.name : '—') + (tx.note ? ' · ' + tx.note : '');
           const accIcon = accountEmoji(tx.account);
           rowInner = `
-            <div class="tx-icon income">↑</div>
+            <div class="tx-icon income">+</div>
             <div class="tx-info">
               <div class="tx-title">${title}</div>
               <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}${tx.note ? ' · 📝' : ''}</div>
@@ -3806,7 +3877,7 @@
           const title = splitsText + (tx.note ? ' · ' + tx.note : '');
           const accIcon = accountEmoji(tx.account);
           rowInner = `
-            <div class="tx-icon expense">↓</div>
+            <div class="tx-icon expense">−</div>
             <div class="tx-info">
               <div class="tx-title">${title}</div>
               <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}${tx.note ? ' · 📝' : ''}</div>
@@ -3862,7 +3933,7 @@
       const list = document.getElementById('sourceList');
       list.innerHTML = state.sources.map(s => `
         <div class="cat-item">
-          <div class="cat-color" style="background:${s.color || '#0D9488'}"></div>
+          <div class="cat-color" style="background:${s.color || '#D97706'}"></div>
           <div class="cat-name">${s.name}</div>
           <div class="cat-actions">
             <button class="icon-btn move-src-up" data-id="${s.id}" title="Выше">↑</button>
@@ -4032,9 +4103,12 @@
         const rem = getPlannedRemaining(p);
         const closed = rem <= 0.009;
         const covered = getPlannedCovered(p.id);
-        const catLabel = (p.splits && p.splits[0])
-          ? getCategoryLabel(p.splits[0].categoryId)
-          : (p.categoryId ? getCategoryLabel(p.categoryId) : '—');
+        const catId = (p.splits && p.splits[0])
+          ? p.splits[0].categoryId
+          : p.categoryId;
+        const catLabel = catId ? getCategoryLabel(catId) : '—';
+        const splitNote = (p.splits && p.splits[0] && p.splits[0].note) ? p.splits[0].note : '';
+        const note = p.note || splitNote;
         const links = getPlannedCoverLinks(p.id);
         const coversHtml = links.length
           ? `<div class="pi-covers">Погашено: ${links.map(l =>
@@ -4044,11 +4118,12 @@
         return `<div class="planned-item ${closed ? 'closed' : ''}" data-planned-id="${p.id}">
           <div class="pi-head">
             <div>
-              <div class="pi-title">${p.note || catLabel}</div>
-              <div class="pi-meta">${p.date ? formatDate(p.date) : 'без даты'} · ${catLabel} · ${formatMoney(p.amount)}
+              <div class="pi-title">${catLabel}</div>
+              <div class="pi-meta">${p.date ? formatDate(p.date) : 'без даты'} · ${formatMoney(p.amount)}
                 ${covered > 0 ? ` · погашено ${formatMoney(covered)}` : ''}
                 ${!closed ? ` · осталось ${formatMoney(rem)}` : ''}
               </div>
+              ${note ? `<div class="pi-meta" style="margin-top:4px">📝 ${note}</div>` : ''}
             </div>
             <span class="pi-badge">${closed ? '✓ закрыта' : 'открыта'}</span>
           </div>
@@ -4072,7 +4147,10 @@
       const pref = prefill || {};
       box.innerHTML = open.map(p => {
         const rem = getPlannedRemaining(p, excludeId);
-        const title = p.note || (p.splits && p.splits[0] ? getCategoryLabel(p.splits[0].categoryId) : 'План');
+        const catId = p.splits && p.splits[0] ? p.splits[0].categoryId : p.categoryId;
+        const catLabel = catId ? getCategoryLabel(catId) : 'План';
+        const note = p.note || (p.splits && p.splits[0] && p.splits[0].note) || '';
+        const title = note ? `${catLabel} · ${note}` : catLabel;
         const cur = pref[p.id] || 0;
         const checked = cur > 0 ? 'checked' : '';
         return `<div class="alloc-row" data-planned-id="${p.id}" data-remaining="${rem}">
@@ -4952,7 +5030,7 @@
       const max = Math.max(...items.map(i => i.value), 0.01);
       let rows = items.map(i => {
         const pct = Math.round((i.value / max) * 100);
-        const color = i.color || '#4F46E5';
+        const color = i.color || '#D97706';
         return `<div class="bar-row">
           <div class="bar-label">${i.label}</div>
           <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
@@ -5025,7 +5103,7 @@
         <style>
           *{box-sizing:border-box}
           body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;margin:0;padding:28px;color:#0f172a;font-size:12.5px;background:#fff}
-          .hero{background:linear-gradient(135deg,#4F46E5,#0D9488);color:#fff;border-radius:16px;padding:20px 22px;margin-bottom:22px}
+          .hero{background:linear-gradient(135deg,#B45309,#D97706);color:#fff;border-radius:16px;padding:20px 22px;margin-bottom:22px}
           .hero h1{margin:0 0 6px;font-size:20px;font-weight:700}
           .hero .sub{opacity:.9;font-size:12px}
           .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 0}
@@ -5033,7 +5111,7 @@
           .kpi .l{font-size:10px;opacity:.85;text-transform:uppercase;letter-spacing:.04em}
           .kpi .v{font-size:15px;font-weight:700;margin-top:2px}
           .section{margin-bottom:20px;page-break-inside:avoid}
-          h2{font-size:13px;margin:0 0 10px;color:#1e293b;border-left:3px solid #4F46E5;padding-left:10px}
+          h2{font-size:13px;margin:0 0 10px;color:#78350F;border-left:3px solid #D97706;padding-left:10px}
           table{width:100%;border-collapse:collapse}
           th,td{padding:7px 8px;border-bottom:1px solid #e2e8f0;text-align:left}
           th{font-size:10px;text-transform:uppercase;letter-spacing:.03em;color:#64748b;background:#f8fafc}
