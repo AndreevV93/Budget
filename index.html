@@ -1321,31 +1321,49 @@
     .alloc-list { margin-top: 8px; }
     .alloc-row {
       display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: center;
-      padding: 8px;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px 12px;
       border: 1px solid var(--border);
-      border-radius: 10px;
-      margin-bottom: 6px;
-      background: #F8FAFC;
+      border-radius: 12px;
+      margin-bottom: 8px;
+      background: #FFFBEB;
       font-size: 0.85rem;
     }
-    .alloc-row input[type="number"] {
-      width: 88px;
-      padding: 6px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      font-size: 16px;
-      font-family: inherit;
+    .alloc-row-top {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
     }
-    .alloc-row label.alloc-check {
+    .alloc-row-title {
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+      word-break: break-word;
+    }
+    .alloc-row-meta {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+    .alloc-row-controls {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
+    }
+    .alloc-row input[type="number"] {
       flex: 1;
       min-width: 0;
-      cursor: pointer;
+      padding: 8px 10px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 16px;
+      font-family: inherit;
+      background: #fff;
+    }
+    .alloc-row .alloc-full-btn {
+      flex-shrink: 0;
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -1674,7 +1692,7 @@
       </div>
 
       <div class="card-title" style="margin-top:14px">Погашение предполагаемых</div>
-      <p class="text-sm text-muted mb-2">Отметьте план и сумму (или «полностью»). Не списывается сверху — это связь с планом.</p>
+      <p class="text-sm text-muted mb-2">Можно погасить <b>частью</b> расхода. Сумма — сколько из этого чека идёт в план. Галочка «полное погашение» закрывает план даже если суммы не совпадают.</p>
       <div class="alloc-list" id="expenseAllocList"></div>
 
       <button class="btn btn-primary" id="btnAddExpense" style="margin-top:8px">Добавить расход</button>
@@ -3866,8 +3884,10 @@
       if (tx.allocations && tx.allocations.length) {
         allocHtml = `<div class="d-split">` + tx.allocations.map(a => {
           const p = (state.planned || []).find(x => x.id === a.plannedId);
-          const title = p ? (p.note || 'План') : 'План';
-          return `<div class="d-row"><span>Погашение: ${title}</span><strong>−${formatMoney(a.amount)}</strong></div>`;
+          const catId = p && p.splits && p.splits[0] ? p.splits[0].categoryId : (p && p.categoryId);
+          const title = p ? (getCategoryLabel(catId) || p.note || 'План') : 'План';
+          const tag = a.full ? 'полное' : 'часть';
+          return `<div class="d-row"><span>Погашение (${tag}): ${title}</span><strong>−${formatMoney(a.amount || 0)}</strong></div>`;
         }).join('') + `</div>`;
       }
       const before = around ? formatMoney(around.before) : '—';
@@ -4157,16 +4177,21 @@
       row.querySelector('.split-amount').addEventListener('input', e => {
         if (splitAutoFillLock) return;
         const inputs = [...document.querySelectorAll('#splitsList .split-amount')];
-        const isLast = inputs.length && inputs[inputs.length - 1] === e.target;
-        if (!isLast) autoFillLastSplit();
-        else updateRemainingHint();
+        if (inputs.length === 2) {
+          // 2 категории: любая введённая → вторая = итог − введённая
+          autoFillLastSplit(e.target);
+        } else {
+          const isLast = inputs.length && inputs[inputs.length - 1] === e.target;
+          if (!isLast) autoFillLastSplit();
+          else updateRemainingHint();
+        }
       });
       row.querySelector('.split-cat').onchange = () => updateRemainingHint();
       if (!skipAutoFill) autoFillLastSplit();
       else updateRemainingHint();
     }
 
-    function autoFillLastSplit() {
+    function autoFillLastSplit(sourceInput) {
       if (splitAutoFillLock) return;
       const total = roundMoney(document.getElementById('expenseAmount').value);
       const inputs = [...document.querySelectorAll('#splitsList .split-amount')];
@@ -4178,7 +4203,26 @@
       splitAutoFillLock = true;
       if (inputs.length === 1) {
         inputs[0].value = total ? String(total) : '';
+      } else if (inputs.length === 2) {
+        if (sourceInput && inputs.includes(sourceInput)) {
+          const other = inputs[0] === sourceInput ? inputs[1] : inputs[0];
+          const entered = roundMoney(sourceInput.value);
+          other.value = total || total === 0 ? String(roundMoney(total - entered)) : '';
+        } else {
+          const v0 = inputs[0].value;
+          const v1 = inputs[1].value;
+          if (v0 !== '' && v1 === '') {
+            inputs[1].value = String(roundMoney(total - (parseFloat(v0) || 0)));
+          } else if (v1 !== '' && v0 === '') {
+            inputs[0].value = String(roundMoney(total - (parseFloat(v1) || 0)));
+          } else if (v0 !== '') {
+            inputs[1].value = String(roundMoney(total - (parseFloat(v0) || 0)));
+          } else if (v1 !== '') {
+            inputs[0].value = String(roundMoney(total - (parseFloat(v1) || 0)));
+          }
+        }
       } else {
+        // 3+ категорий: как раньше — досчёт только последней
         let used = 0;
         for (let i = 0; i < inputs.length - 1; i++) {
           used = roundMoney(used + (parseFloat(inputs[i].value) || 0));
@@ -4234,18 +4278,28 @@
         if (tx.type !== 'expense' || !tx.allocations) return;
         if (excludeExpenseId && tx.id === excludeExpenseId) return;
         tx.allocations.forEach(a => {
-          if (a.plannedId === plannedId) sum = roundMoney(sum + (a.amount || 0));
+          if (a.plannedId === plannedId) sum = roundMoney(sum + (Number(a.amount) || 0));
         });
       });
       return sum;
     }
 
-    function getPlannedRemaining(p, excludeExpenseId) {
-      return roundMoney((p.amount || 0) - getPlannedCovered(p.id, excludeExpenseId));
+    function hasPlannedFullClose(plannedId, excludeExpenseId) {
+      return state.transactions.some(tx => {
+        if (tx.type !== 'expense' || !tx.allocations) return false;
+        if (excludeExpenseId && tx.id === excludeExpenseId) return false;
+        return tx.allocations.some(a => a.plannedId === plannedId && a.full);
+      });
     }
 
-    function isPlannedClosed(p) {
-      return getPlannedRemaining(p) <= 0.009;
+    function isPlannedClosed(p, excludeExpenseId) {
+      if (hasPlannedFullClose(p.id, excludeExpenseId)) return true;
+      return getPlannedCovered(p.id, excludeExpenseId) >= (p.amount || 0) - 0.009;
+    }
+
+    function getPlannedRemaining(p, excludeExpenseId) {
+      if (isPlannedClosed(p, excludeExpenseId)) return 0;
+      return Math.max(0, roundMoney((p.amount || 0) - getPlannedCovered(p.id, excludeExpenseId)));
     }
 
     function getOpenPlannedSum() {
@@ -4260,12 +4314,19 @@
       state.transactions.forEach(tx => {
         if (tx.type !== 'expense' || !tx.allocations) return;
         tx.allocations.forEach(a => {
-          if (a.plannedId === plannedId && a.amount > 0) {
-            links.push({ expenseId: tx.id, amount: a.amount, date: tx.date, note: tx.note });
+          if (a.plannedId === plannedId && ((a.amount || 0) > 0 || a.full)) {
+            links.push({
+              expenseId: tx.id,
+              amount: a.amount || 0,
+              full: !!a.full,
+              date: tx.date,
+              note: tx.note,
+              expenseAmount: tx.amount
+            });
           }
         });
       });
-      return links;
+      return links.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
     }
 
     function renderPlannedList() {
@@ -4280,9 +4341,9 @@
       }
       if (empty) empty.classList.add('hidden');
       list.innerHTML = items.map(p => {
-        const rem = getPlannedRemaining(p);
-        const closed = rem <= 0.009;
+        const closed = isPlannedClosed(p);
         const covered = getPlannedCovered(p.id);
+        const rem = getPlannedRemaining(p);
         const catId = (p.splits && p.splits[0])
           ? p.splits[0].categoryId
           : p.categoryId;
@@ -4291,17 +4352,19 @@
         const note = p.note || splitNote;
         const links = getPlannedCoverLinks(p.id);
         const coversHtml = links.length
-          ? `<div class="pi-covers">Погашено: ${links.map(l =>
-              `${formatDate(l.date)} (−${formatMoney(l.amount)}${l.note ? ', ' + l.note : ''})`
-            ).join('; ')}</div>`
+          ? `<div class="pi-covers"><strong>Операции погашения:</strong><br>${links.map(l =>
+              `${formatDate(l.date)}: −${formatMoney(l.amount)} с расхода ${formatMoney(l.expenseAmount)}${l.full ? ' · полное закрытие' : ' · частично'}${l.note ? ' · ' + l.note : ''}`
+            ).join('<br>')}</div>`
           : '';
         return `<div class="planned-item ${closed ? 'closed' : ''}" data-planned-id="${p.id}">
           <div class="pi-head">
             <div>
               <div class="pi-title">${catLabel}</div>
-              <div class="pi-meta">${p.date ? formatDate(p.date) : 'без даты'} · ${formatMoney(p.amount)}
-                ${covered > 0 ? ` · погашено ${formatMoney(covered)}` : ''}
-                ${!closed ? ` · осталось ${formatMoney(rem)}` : ''}
+              <div class="pi-meta">${p.date ? formatDate(p.date) : 'без даты'}</div>
+              <div class="pi-meta" style="margin-top:4px">
+                Было запланировано: <strong>${formatMoney(p.amount)}</strong><br>
+                Потрачено (погашено): <strong>${formatMoney(covered)}</strong>
+                ${!closed ? `<br>Осталось погасить: <strong>${formatMoney(rem)}</strong>` : ''}
               </div>
               ${note ? `<div class="pi-meta" style="margin-top:4px">📝 ${note}</div>` : ''}
             </div>
@@ -4319,7 +4382,7 @@
       const box = document.getElementById('expenseAllocList');
       if (!box) return;
       const excludeId = editingExpenseId || null;
-      const open = (state.planned || []).filter(p => getPlannedRemaining(p, excludeId) > 0.009);
+      const open = (state.planned || []).filter(p => !isPlannedClosed(p, excludeId));
       if (!open.length) {
         box.innerHTML = '<p class="text-sm text-muted">Нет открытых предполагаемых трат</p>';
         return;
@@ -4330,33 +4393,34 @@
         const catId = p.splits && p.splits[0] ? p.splits[0].categoryId : p.categoryId;
         const catLabel = catId ? getCategoryLabel(catId) : 'План';
         const note = p.note || (p.splits && p.splits[0] && p.splits[0].note) || '';
-        const title = note ? `${catLabel} · ${note}` : catLabel;
-        const cur = pref[p.id] || 0;
-        const checked = cur > 0 ? 'checked' : '';
+        const cur = pref[p.id] || {};
+        const curAmt = typeof cur === 'object' ? (cur.amount || 0) : cur;
+        const curFull = typeof cur === 'object' ? !!cur.full : false;
         return `<div class="alloc-row" data-planned-id="${p.id}" data-remaining="${rem}">
-          <label class="alloc-check">
-            <input type="checkbox" class="alloc-full" ${checked}>
-            <span>${title} · осталось ${formatMoney(rem)}</span>
+          <div class="alloc-row-top">
+            <div class="alloc-row-title">${catLabel}</div>
+            <div class="alloc-row-meta">
+              план ${formatMoney(p.amount)} · осталось ${formatMoney(rem)}${note ? ' · 📝 ' + note : ''}${p.date ? ' · ' + formatDate(p.date) : ''}
+            </div>
+          </div>
+          <div class="alloc-row-controls">
+            <input type="number" class="alloc-amount" placeholder="Часть расхода" min="0" step="0.01" inputmode="decimal" value="${curAmt || ''}">
+            <button type="button" class="btn btn-ghost btn-sm alloc-rem-btn">Остаток</button>
+          </div>
+          <label class="alloc-check" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.82rem">
+            <input type="checkbox" class="alloc-full" ${curFull ? 'checked' : ''}>
+            <span>Полное погашение плана (закрыть, даже если суммы не совпадают)</span>
           </label>
-          <input type="number" class="alloc-amount" placeholder="0" min="0" step="0.01" inputmode="decimal" value="${cur || ''}">
-          <button type="button" class="btn btn-ghost btn-sm alloc-full-btn" style="padding:6px 8px;font-size:0.75rem">Всё</button>
         </div>`;
       }).join('');
 
-      box.querySelectorAll('.alloc-full-btn').forEach(btn => {
+      box.querySelectorAll('.alloc-rem-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const row = btn.closest('.alloc-row');
           const rem = parseFloat(row.dataset.remaining) || 0;
-          row.querySelector('.alloc-amount').value = String(rem);
-          row.querySelector('.alloc-full').checked = true;
-        });
-      });
-      box.querySelectorAll('.alloc-full').forEach(cb => {
-        cb.addEventListener('change', () => {
-          const row = cb.closest('.alloc-row');
-          const rem = parseFloat(row.dataset.remaining) || 0;
-          if (cb.checked) row.querySelector('.alloc-amount').value = String(rem);
-          else row.querySelector('.alloc-amount').value = '';
+          const input = row.querySelector('.alloc-amount');
+          input.value = String(rem);
+          input.focus();
         });
       });
     }
@@ -4367,7 +4431,11 @@
       rows.forEach(row => {
         const plannedId = row.dataset.plannedId;
         const amount = roundMoney(row.querySelector('.alloc-amount')?.value);
-        if (amount > 0 && plannedId) out.push({ plannedId, amount });
+        const full = !!row.querySelector('.alloc-full')?.checked;
+        if (!plannedId) return;
+        if (amount > 0 || full) {
+          out.push({ plannedId, amount: amount || 0, full: full || undefined });
+        }
       });
       return out;
     }
@@ -4423,7 +4491,9 @@
       updateRemainingHint();
 
       const pref = {};
-      (tx.allocations || []).forEach(a => { pref[a.plannedId] = a.amount; });
+      (tx.allocations || []).forEach(a => {
+        pref[a.plannedId] = { amount: a.amount || 0, full: !!a.full };
+      });
       renderExpenseAllocList(pref);
 
       // Перейти на экран расходов
@@ -4836,16 +4906,19 @@
           return toast('Сумма категорий должна равняться общей сумме');
         }
 
-        const allocSum = roundMoney(allocations.reduce((s, a) => s + a.amount, 0));
+        const allocSum = roundMoney(allocations.reduce((s, a) => s + (a.amount || 0), 0));
         if (allocSum > amount + 0.05) {
-          return toast('Погашение планов не может быть больше суммы расхода');
+          return toast('Сумма погашений по планам не может быть больше суммы расхода');
         }
         for (const a of allocations) {
           const p = (state.planned || []).find(x => x.id === a.plannedId);
           if (!p) return toast('План не найден');
-          const rem = getPlannedRemaining(p, editingExpenseId);
-          if (a.amount > rem + 0.05) {
-            return toast(`Сумма погашения больше остатка плана «${p.note || 'план'}»`);
+          if (a.full) {
+            if ((a.amount || 0) <= 0) {
+              return toast('При полном погашении укажите, какая часть этого расхода идёт в план');
+            }
+          } else if ((a.amount || 0) <= 0) {
+            return toast('Укажите сумму частичного погашения');
           }
         }
 
