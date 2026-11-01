@@ -1700,8 +1700,67 @@
     </div>
 
     <div class="card">
+      <div class="card-title">Автооплата</div>
+      <p class="text-sm text-muted mb-2">Регулярные списания. В день оплаты списываются сами; при нехватке денег — ошибка в истории.</p>
+      <div class="form-group">
+        <label>Сумма (Br)</label>
+        <input type="number" id="autopayAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Категория</label>
+        <select id="autopayCategory"></select>
+      </div>
+      <div class="form-group">
+        <label>Счёт списания</label>
+        <div class="account-toggle" id="autopayAccountToggle" style="flex-wrap:wrap">
+          <label class="account-option active" data-account="visa">
+            <input type="radio" name="autopayAccount" value="visa" checked>
+            <span class="opt-icon"><span class="brand-visa" style="font-size:0.55rem;padding:2px 5px">VISA</span></span>
+          </label>
+          <label class="account-option" data-account="mastercard">
+            <input type="radio" name="autopayAccount" value="mastercard">
+            <span class="opt-icon"><span class="brand-mc" style="width:28px;height:16px"><span class="mc-r" style="width:12px;height:12px"></span><span class="mc-y" style="width:12px;height:12px"></span></span></span>
+          </label>
+          <label class="account-option" data-account="cash">
+            <input type="radio" name="autopayAccount" value="cash">
+            <span class="opt-icon">💵</span>
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Частота</label>
+        <select id="autopayFreq">
+          <option value="daily">Каждый день</option>
+          <option value="weekly">Раз в неделю</option>
+          <option value="every30">Раз в 30 дней</option>
+          <option value="monthDay">Определённого числа месяца</option>
+        </select>
+      </div>
+      <div class="form-group hidden" id="autopayMonthDayWrap">
+        <label>Число месяца (1–31)</label>
+        <input type="number" id="autopayMonthDay" min="1" max="31" value="1">
+      </div>
+      <div class="form-group">
+        <label>Первый день списания</label>
+        <input type="date" id="autopayStart">
+      </div>
+      <div class="form-group">
+        <label>Заметка</label>
+        <input type="text" id="autopayNote" placeholder="Например: интернет">
+      </div>
+      <button class="btn btn-secondary" id="btnAddAutopay" style="width:100%">Добавить автооплату</button>
+      <div class="mt-2" id="autopayList"></div>
+      <div class="empty-state hidden" id="autopayListEmpty">Нет автооплат</div>
+    </div>
+
+    <div class="card">
       <div class="card-title">Предполагаемые траты</div>
-      <p class="text-sm text-muted mb-2">Не вычитаются из счетов, пока не погасите обычным расходом.</p>
+      <p class="text-sm text-muted mb-2">Не вычитаются из счетов, пока не погасите. Ближайшие автооплаты (≤15 дней) появляются здесь сами. Без даты — тоже показываются.</p>
+      <div class="form-group">
+        <label>Учитывать планы только до даты (пусто = без ограничения)</label>
+        <input type="date" id="plannedUntilDate">
+      </div>
+
       <div class="form-group">
         <label>Сумма (Br)</label>
         <input type="number" id="plannedAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
@@ -2057,6 +2116,8 @@
       sources: [],
       transactions: [],
       planned: [],
+      autopay: [],
+      plannedUntilDate: null,
       initialBalances: { visa: 0, mastercard: 0, cash: 0 },
       setupComplete: false,
       period: 'month',
@@ -2496,6 +2557,8 @@
           state.sources = data.sources || [...DEFAULT_SOURCES];
           state.transactions = data.transactions || [];
           state.planned = data.planned || [];
+          state.autopay = data.autopay || [];
+          state.plannedUntilDate = data.plannedUntilDate || null;
           state.initialBalances = data.initialBalances || { visa: 0, mastercard: 0, cash: 0 };
           // migrate old card → visa
           if (state.initialBalances.card != null && state.initialBalances.visa == null) {
@@ -2536,6 +2599,8 @@
         state.sources = [...DEFAULT_SOURCES];
         state.transactions = [];
         state.planned = [];
+        state.autopay = [];
+        state.plannedUntilDate = null;
         state.initialBalances = { visa: 0, mastercard: 0, cash: 0 };
         state.setupComplete = false;
       }
@@ -2554,6 +2619,8 @@
         sources: state.sources,
         transactions: state.transactions,
         planned: state.planned,
+        autopay: state.autopay || [],
+        plannedUntilDate: state.plannedUntilDate || null,
         initialBalances: state.initialBalances,
         setupComplete: state.setupComplete
       }));
@@ -2577,6 +2644,8 @@
         sources: state.sources,
         transactions: state.transactions,
         planned: state.planned,
+        autopay: state.autopay || [],
+        plannedUntilDate: state.plannedUntilDate || null,
         initialBalances: state.initialBalances,
         setupComplete: state.setupComplete,
         updatedAt: new Date().toISOString()
@@ -2647,6 +2716,8 @@
         if (data.sources) state.sources = data.sources;
         if (data.transactions) state.transactions = data.transactions;
         if (data.planned) state.planned = data.planned;
+        if (data.autopay) state.autopay = data.autopay;
+        if (data.plannedUntilDate !== undefined) state.plannedUntilDate = data.plannedUntilDate || null;
         if (data.initialBalances) state.initialBalances = data.initialBalances;
         if (data.setupComplete !== undefined) state.setupComplete = !!data.setupComplete;
         state.transactions.forEach(tx => {
@@ -2777,7 +2848,7 @@
         }
         const a = normalizeAccount(tx.account);
         if (tx.type === 'income' && bal[a] != null) bal[a] = roundMoney(bal[a] + amount);
-        if (tx.type === 'expense' && bal[a] != null) bal[a] = roundMoney(bal[a] - amount);
+        if (tx.type === 'expense' && bal[a] != null && tx.autopayStatus !== 'error') bal[a] = roundMoney(bal[a] - amount);
       };
       for (const tx of ordered) {
         if (tx.id === txId) {
@@ -2836,6 +2907,7 @@
         if (tx.type === 'income') {
           if (bal[acc] != null) bal[acc] = roundMoney(bal[acc] + amount);
         } else if (tx.type === 'expense') {
+          if (tx.autopayStatus === 'error') return; // неуспешная автооплата не списывает
           if (bal[acc] != null) bal[acc] = roundMoney(bal[acc] - amount);
         }
       });
@@ -2874,9 +2946,12 @@
       if (name === 'stats') renderStats();
       if (name === 'income') { renderIncomeList(); fillSourceSelect(); }
       if (name === 'expense') {
+        processAutopays();
         renderExpenseList();
         refreshSplitCategorySelects();
         fillPlannedCategorySelect();
+        fillAutopayCategorySelect();
+        renderAutopayList();
         renderPlannedList();
         renderExpenseAllocList();
         if (!document.querySelector('#splitsList .split-row')) addSplitRow();
@@ -3147,18 +3222,12 @@
       };
     }
 
+    /** Только диапазон дат любопытной статистики — без фильтров основного экрана */
     function filterCuriousTx(type, rangeFrom, rangeTo) {
       return state.transactions.filter(tx => {
         if (type && tx.type !== type) return false;
         if (rangeFrom && tx.date < rangeFrom) return false;
         if (rangeTo && tx.date > rangeTo) return false;
-        if (type === 'expense' && state.statsFilterCats.length) {
-          const splits = tx.splits || [];
-          if (!splits.some(sp => categoryMatchesFilter(sp.categoryId))) return false;
-        }
-        if (type === 'income' && state.statsFilterSources.length) {
-          if (!state.statsFilterSources.includes(tx.sourceId)) return false;
-        }
         return true;
       });
     }
@@ -3203,9 +3272,11 @@
         curiousCompareCats.forEach(id => { sums[id] = 0; });
         expenses.forEach(tx => {
           (tx.splits || []).forEach(sp => {
-            const root = getRootCategoryId(sp.categoryId);
-            if (sums[root] != null) sums[root] += sp.amount;
-            else if (sums[sp.categoryId] != null) sums[sp.categoryId] += sp.amount;
+            const cid = sp.categoryId;
+            const root = getRootCategoryId(cid);
+            // учитываем и выбранный корень, и выбранную подкатегорию
+            if (sums[cid] != null) sums[cid] = roundMoney(sums[cid] + sp.amount);
+            else if (sums[root] != null) sums[root] = roundMoney(sums[root] + sp.amount);
           });
         });
         const labels = [];
@@ -3228,7 +3299,7 @@
           },
           options: curiousBarOptions()
         });
-        hint.textContent = `Сравнение категорий с ${formatDate(rangeFrom)} по ${formatDate(rangeTo)}.`;
+        hint.textContent = `Сравнение только по выбранным категориям · ${formatDate(rangeFrom)} — ${formatDate(rangeTo)} (фильтры общей статистики не влияют).`;
         return;
       }
 
@@ -3959,15 +4030,18 @@
         const allocNote = (tx.allocations && tx.allocations.length)
           ? ' · план ✓'
           : '';
+        const err = tx.autopayStatus === 'error';
+        const autoOk = tx.autopayId && !err;
+        const statusNote = err ? ' · ⚠ ошибка автооплаты' : (autoOk ? ' · авто' : '');
         return `<div class="tx-wrap" data-tx-id="${tx.id}">
           <div class="tx-item clickable" data-expand="1">
-            <div class="tx-icon expense">−</div>
+            <div class="tx-icon expense">${err ? '!' : '−'}</div>
             <div class="tx-info">
-              <div class="tx-title">${splitsText}${tx.note ? ' · ' + tx.note : ''}${allocNote}</div>
+              <div class="tx-title">${splitsText}${tx.note ? ' · ' + tx.note : ''}${allocNote}${statusNote}</div>
               <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}</div>
             </div>
-            <div class="tx-amount expense">−${formatMoney(tx.amount)}</div>
-            <button class="tx-edit" data-id="${tx.id}" title="Изменить">✎</button>
+            <div class="tx-amount expense" style="${err ? 'opacity:0.55;text-decoration:line-through' : ''}">−${formatMoney(tx.amount)}</div>
+            ${err ? `<button class="tx-edit autopay-fix" data-id="${tx.id}" title="Погасить">✓</button>` : `<button class="tx-edit" data-id="${tx.id}" title="Изменить">✎</button>`}
             <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
           </div>
           <div class="tx-detail">${buildExpenseDetailHtml(tx)}</div>
@@ -4073,16 +4147,17 @@
           const splitsText = (tx.splits || []).map(sp =>
             `${getCategoryLabel(sp.categoryId)} ${formatMoney(sp.amount)}`
           ).join(', ');
-          const title = splitsText + (tx.note ? ' · ' + tx.note : '');
+          const err = tx.autopayStatus === 'error';
+          const title = splitsText + (tx.note ? ' · ' + tx.note : '') + (err ? ' · ⚠ ошибка автооплаты' : (tx.autopayId ? ' · авто' : ''));
           const accIcon = accountEmoji(tx.account);
           rowInner = `
-            <div class="tx-icon expense">−</div>
+            <div class="tx-icon expense">${err ? '!' : '−'}</div>
             <div class="tx-info">
               <div class="tx-title">${title}</div>
               <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}${tx.note ? ' · 📝' : ''}</div>
             </div>
-            <div class="tx-amount expense">−${formatMoney(tx.amount)}</div>
-            <button class="tx-edit" data-id="${tx.id}" title="Изменить">✎</button>
+            <div class="tx-amount expense" style="${err ? 'opacity:0.55;text-decoration:line-through' : ''}">−${formatMoney(tx.amount)}</div>
+            ${err ? `<button class="tx-edit autopay-fix" data-id="${tx.id}" title="Погасить">✓</button>` : `<button class="tx-edit" data-id="${tx.id}" title="Изменить">✎</button>`}
             <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>`;
         }
         return `<div class="tx-wrap" data-tx-id="${tx.id}">
@@ -4271,6 +4346,161 @@
       }).filter(s => s.amount > 0);
     }
 
+    // ========== AUTOPAY ==========
+    function freqLabel(f) {
+      return ({ daily: 'каждый день', weekly: 'раз в неделю', every30: 'раз в 30 дней', monthDay: 'числа месяца' })[f] || f;
+    }
+
+    function isAutopayDue(rule, dateStr) {
+      if (!rule || !rule.startDate || dateStr < rule.startDate) return false;
+      if (rule.frequency === 'daily') return true;
+      const start = new Date(rule.startDate + 'T12:00:00');
+      const d = new Date(dateStr + 'T12:00:00');
+      const diff = Math.round((d - start) / 86400000);
+      if (diff < 0) return false;
+      if (rule.frequency === 'weekly') return diff % 7 === 0;
+      if (rule.frequency === 'every30') return diff % 30 === 0;
+      if (rule.frequency === 'monthDay') {
+        const day = Math.min(31, Math.max(1, parseInt(rule.monthDay, 10) || 1));
+        const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+        return d.getDate() === Math.min(day, last);
+      }
+      return false;
+    }
+
+    function nextAutopayDates(rule, fromDate, limitDays) {
+      const out = [];
+      const start = new Date(fromDate + 'T12:00:00');
+      for (let i = 0; i <= limitDays; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const s = localISODate(d);
+        if (isAutopayDue(rule, s)) out.push(s);
+      }
+      return out;
+    }
+
+    function hasAutopayTx(ruleId, dateStr) {
+      return state.transactions.some(tx =>
+        tx.autopayId === ruleId && tx.date === dateStr && tx.type === 'expense'
+      );
+    }
+
+    function processAutopays() {
+      state.autopay = state.autopay || [];
+      let changed = false;
+      const todayStr = today();
+      state.autopay.filter(r => r.active !== false).forEach(rule => {
+        // process from startDate to today
+        const start = new Date(rule.startDate + 'T12:00:00');
+        const end = new Date(todayStr + 'T12:00:00');
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          const s = localISODate(d);
+          if (!isAutopayDue(rule, s)) continue;
+          if (hasAutopayTx(rule.id, s)) continue;
+          // balance at moment of processing (current computed)
+          const bal = getAccountBalances();
+          const acc = normalizeAccount(rule.account);
+          const enough = (bal[acc] || 0) + 0.009 >= rule.amount;
+          const status = enough ? 'ok' : 'error';
+          state.transactions.push({
+            id: uid(),
+            type: 'expense',
+            amount: rule.amount,
+            date: s,
+            account: acc,
+            splits: [{ categoryId: rule.categoryId, amount: rule.amount }],
+            note: (rule.note ? rule.note + ' · ' : '') + 'Автооплата',
+            autopayId: rule.id,
+            autopayStatus: status
+          });
+          rule.lastProcessedDate = s;
+          changed = true;
+        }
+      });
+      if (changed) saveState();
+      return changed;
+    }
+
+    function getUpcomingAutopayPlanned() {
+      const todayStr = today();
+      const items = [];
+      (state.autopay || []).filter(r => r.active !== false).forEach(rule => {
+        const dates = nextAutopayDates(rule, todayStr, 15);
+        dates.forEach(dt => {
+          if (hasAutopayTx(rule.id, dt)) return;
+          // if due today but not yet processed, processAutopays handles; still show if error?
+          items.push({
+            id: 'autoplan-' + rule.id + '-' + dt,
+            amount: rule.amount,
+            date: dt,
+            note: (rule.note || 'Автооплата') + ' · ' + freqLabel(rule.frequency),
+            splits: [{ categoryId: rule.categoryId, amount: rule.amount }],
+            fromAutopay: true,
+            autopayId: rule.id,
+            account: rule.account
+          });
+        });
+      });
+      return items;
+    }
+
+    function fillAutopayCategorySelect() {
+      const sel = document.getElementById('autopayCategory');
+      if (!sel) return;
+      const cur = sel.value;
+      sel.innerHTML = buildCategoryOptions(cur);
+    }
+
+    function renderAutopayList() {
+      const list = document.getElementById('autopayList');
+      const empty = document.getElementById('autopayListEmpty');
+      if (!list) return;
+      const items = (state.autopay || []).slice().sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+      if (!items.length) {
+        list.innerHTML = '';
+        if (empty) empty.classList.remove('hidden');
+        return;
+      }
+      if (empty) empty.classList.add('hidden');
+      list.innerHTML = items.map(r => {
+        const cat = getCategoryLabel(r.categoryId);
+        const next = nextAutopayDates(r, today(), 60)[0];
+        return `<div class="planned-item" data-autopay-id="${r.id}">
+          <div class="pi-head">
+            <div>
+              <div class="pi-title">${cat} · ${formatMoney(r.amount)}</div>
+              <div class="pi-meta">${freqLabel(r.frequency)}${r.frequency === 'monthDay' ? ' (' + (r.monthDay || 1) + ')' : ''}
+                · ${accountLabel(r.account)} · с ${formatDate(r.startDate)}
+                ${next ? ' · след. ' + formatDate(next) : ''}
+              </div>
+              ${r.note ? `<div class="pi-meta">📝 ${r.note}</div>` : ''}
+            </div>
+            <span class="pi-badge">${r.active === false ? 'выкл' : 'активна'}</span>
+          </div>
+          <div style="margin-top:8px;display:flex;gap:6px">
+            <button type="button" class="btn btn-ghost btn-sm autopay-toggle" data-id="${r.id}" style="flex:1">${r.active === false ? 'Включить' : 'Выключить'}</button>
+            <button type="button" class="btn btn-ghost btn-sm autopay-del" data-id="${r.id}" style="flex:1">Удалить</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function markAutopayPaid(txId) {
+      const tx = state.transactions.find(t => t.id === txId);
+      if (!tx || tx.autopayStatus !== 'error') return toast('Не ошибка автооплаты');
+      const bal = getAccountBalances();
+      const acc = normalizeAccount(tx.account);
+      if ((bal[acc] || 0) + 0.009 < tx.amount) {
+        return toast('Недостаточно средств на ' + accountLabel(acc));
+      }
+      tx.autopayStatus = 'ok';
+      tx.note = (tx.note || 'Автооплата') + ' · погашено вручную';
+      saveState();
+      renderAll();
+      toast('Автооплата погашена, сумма списана');
+    }
+
     // ========== PLANNED EXPENSES ==========
     function getPlannedCovered(plannedId, excludeExpenseId) {
       let sum = 0;
@@ -4302,11 +4532,25 @@
       return Math.max(0, roundMoney((p.amount || 0) - getPlannedCovered(p.id, excludeExpenseId)));
     }
 
+    function plannedPassesUntilFilter(p) {
+      const until = state.plannedUntilDate;
+      if (!until) return true;
+      if (!p.date) return true; // без даты всегда учитываем
+      return p.date <= until;
+    }
+
     function getOpenPlannedSum() {
-      return roundMoney((state.planned || []).reduce((s, p) => {
+      let sum = 0;
+      (state.planned || []).forEach(p => {
+        if (!plannedPassesUntilFilter(p)) return;
         const rem = getPlannedRemaining(p);
-        return s + (rem > 0 ? rem : 0);
-      }, 0));
+        if (rem > 0) sum += rem;
+      });
+      getUpcomingAutopayPlanned().forEach(p => {
+        if (!plannedPassesUntilFilter(p)) return;
+        sum += p.amount || 0;
+      });
+      return roundMoney(sum);
     }
 
     function getPlannedCoverLinks(plannedId) {
@@ -4333,7 +4577,13 @@
       const list = document.getElementById('plannedList');
       const empty = document.getElementById('plannedListEmpty');
       if (!list) return;
-      const items = (state.planned || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      const untilInput = document.getElementById('plannedUntilDate');
+      if (untilInput && untilInput.value !== (state.plannedUntilDate || '')) {
+        untilInput.value = state.plannedUntilDate || '';
+      }
+      const manual = (state.planned || []).filter(plannedPassesUntilFilter);
+      const auto = getUpcomingAutopayPlanned().filter(plannedPassesUntilFilter);
+      const items = manual.concat(auto).sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999'));
       if (!items.length) {
         list.innerHTML = '';
         if (empty) empty.classList.remove('hidden');
@@ -4341,6 +4591,22 @@
       }
       if (empty) empty.classList.add('hidden');
       list.innerHTML = items.map(p => {
+        if (p.fromAutopay) {
+          const catLabel = getCategoryLabel(p.splits[0].categoryId);
+          return `<div class="planned-item" data-autopay-plan="${p.autopayId}">
+            <div class="pi-head">
+              <div>
+                <div class="pi-title">🔁 ${catLabel}</div>
+                <div class="pi-meta">${p.date ? formatDate(p.date) : 'без даты'} · автооплата · ${accountLabel(p.account)}</div>
+                <div class="pi-meta" style="margin-top:4px">
+                  Запланировано: <strong>${formatMoney(p.amount)}</strong>
+                </div>
+                ${p.note ? `<div class="pi-meta" style="margin-top:4px">📝 ${p.note}</div>` : ''}
+              </div>
+              <span class="pi-badge">ожидается</span>
+            </div>
+          </div>`;
+        }
         const closed = isPlannedClosed(p);
         const covered = getPlannedCovered(p.id);
         const rem = getPlannedRemaining(p);
@@ -4865,6 +5131,80 @@
         toast('Предполагаемая трата добавлена');
       });
 
+      document.getElementById('plannedUntilDate').addEventListener('change', e => {
+        state.plannedUntilDate = e.target.value || null;
+        saveState();
+        renderPlannedList();
+        renderAccountBalances();
+      });
+
+      document.getElementById('autopayFreq').addEventListener('change', e => {
+        document.getElementById('autopayMonthDayWrap').classList.toggle('hidden', e.target.value !== 'monthDay');
+      });
+      if (document.getElementById('autopayStart') && !document.getElementById('autopayStart').value) {
+        document.getElementById('autopayStart').value = today();
+      }
+      document.getElementById('btnAddAutopay').addEventListener('click', () => {
+        const amount = roundMoney(document.getElementById('autopayAmount').value);
+        const categoryId = document.getElementById('autopayCategory').value;
+        const account = normalizeAccount(document.querySelector('input[name="autopayAccount"]:checked')?.value || 'visa');
+        const frequency = document.getElementById('autopayFreq').value;
+        const monthDay = parseInt(document.getElementById('autopayMonthDay').value, 10) || 1;
+        const startDate = document.getElementById('autopayStart').value;
+        const note = document.getElementById('autopayNote').value.trim();
+        if (!amount || amount <= 0) return toast('Введите сумму');
+        if (!categoryId) return toast('Выберите категорию');
+        if (!startDate) return toast('Укажите первый день списания');
+        state.autopay = state.autopay || [];
+        state.autopay.push({
+          id: uid(),
+          amount,
+          categoryId,
+          account,
+          frequency,
+          monthDay: frequency === 'monthDay' ? monthDay : undefined,
+          startDate,
+          note: note || undefined,
+          active: true
+        });
+        saveState();
+        processAutopays();
+        document.getElementById('autopayAmount').value = '';
+        document.getElementById('autopayNote').value = '';
+        renderAutopayList();
+        renderPlannedList();
+        renderExpenseList();
+        renderHistory();
+        renderAccountBalances();
+        toast('Автооплата добавлена');
+      });
+
+      document.addEventListener('click', e => {
+        if (e.target.closest('.autopay-del')) {
+          const id = e.target.closest('.autopay-del').dataset.id;
+          if (confirm('Удалить правило автооплаты? Уже созданные операции останутся.')) {
+            state.autopay = (state.autopay || []).filter(r => r.id !== id);
+            saveState();
+            renderAutopayList();
+            renderPlannedList();
+            renderAccountBalances();
+            toast('Правило удалено');
+          }
+          return;
+        }
+        if (e.target.closest('.autopay-toggle')) {
+          const id = e.target.closest('.autopay-toggle').dataset.id;
+          const r = (state.autopay || []).find(x => x.id === id);
+          if (r) {
+            r.active = r.active === false ? true : false;
+            saveState();
+            renderAutopayList();
+            renderPlannedList();
+            renderAccountBalances();
+          }
+        }
+      });
+
       document.addEventListener('click', e => {
         if (e.target.classList.contains('planned-del') || e.target.closest('.planned-del')) {
           const btn = e.target.classList.contains('planned-del') ? e.target : e.target.closest('.planned-del');
@@ -4971,6 +5311,10 @@
       document.addEventListener('click', e => {
         if (e.target.classList.contains('tx-edit') || e.target.closest('.tx-edit')) {
           const btn = e.target.classList.contains('tx-edit') ? e.target : e.target.closest('.tx-edit');
+          if (btn.classList.contains('autopay-fix')) {
+            markAutopayPaid(btn.dataset.id);
+            return;
+          }
           startEditExpense(btn.dataset.id);
           return;
         }
@@ -5188,6 +5532,9 @@
           categories: state.categories,
           sources: state.sources,
           transactions: state.transactions,
+          planned: state.planned || [],
+          autopay: state.autopay || [],
+          plannedUntilDate: state.plannedUntilDate || null,
           initialBalances: state.initialBalances,
           setupComplete: state.setupComplete,
           exportedAt: new Date().toISOString()
@@ -5217,6 +5564,9 @@
             if (data.transactions) state.transactions = data.transactions;
             if (data.planned) state.planned = data.planned;
             else if (!state.planned) state.planned = [];
+            if (data.autopay) state.autopay = data.autopay;
+            else if (!state.autopay) state.autopay = [];
+            if (data.plannedUntilDate !== undefined) state.plannedUntilDate = data.plannedUntilDate || null;
             if (data.initialBalances) state.initialBalances = data.initialBalances;
             if (data.setupComplete !== undefined) state.setupComplete = !!data.setupComplete;
             state.transactions.forEach(tx => {
@@ -5582,8 +5932,10 @@
     }
 
     function renderAll() {
+      processAutopays();
       renderStats();
       renderAccountBalances();
+      renderAutopayList();
       renderPlannedList();
       renderExpenseAllocList();
       renderIncomeList();
@@ -5592,6 +5944,7 @@
       renderCategories();
       renderSources();
       fillSourceSelect();
+      fillAutopayCategorySelect();
       updateHeader();
     }
 
