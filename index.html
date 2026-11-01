@@ -886,18 +886,25 @@
       position: fixed;
       bottom: calc(80px + var(--safe-bottom));
       left: 50%;
+      width: calc(100vw - 24px);
+      max-width: 420px;
       transform: translateX(-50%) translateY(20px);
-      background: #134E4A;
+      background: #1c1917;
       color: white;
-      padding: 12px 20px;
+      padding: 12px 16px;
       border-radius: 12px;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       font-weight: 500;
+      line-height: 1.4;
       opacity: 0;
       transition: all 0.3s;
       z-index: 300;
       pointer-events: none;
-      white-space: nowrap;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+      box-sizing: border-box;
+      text-align: left;
     }
 
     .toast.show {
@@ -1433,25 +1440,42 @@
       left: 12px;
       right: 12px;
       bottom: calc(72px + var(--safe-bottom));
+      max-width: min(420px, calc(100vw - 24px));
+      margin: 0 auto;
       background: #1c1917;
       color: #fff;
-      padding: 12px 14px;
+      padding: 14px 16px;
       border-radius: 12px;
-      font-size: 0.85rem;
+      font-size: 0.88rem;
+      line-height: 1.45;
       z-index: 180;
       display: none;
       box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      box-sizing: border-box;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
     }
     .coach-toast.show { display: block; }
+    .coach-toast .coach-text {
+      display: block;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+    }
     .coach-toast button {
-      margin-top: 8px;
+      display: block;
+      width: 100%;
+      margin-top: 12px;
       background: rgba(255,255,255,0.15);
       border: none;
       color: #fff;
       border-radius: 8px;
-      padding: 6px 10px;
+      padding: 10px 12px;
       font-family: inherit;
+      font-size: 0.9rem;
       cursor: pointer;
+      box-sizing: border-box;
     }
     .hist-search {
       width: 100%;
@@ -1695,6 +1719,11 @@
             <option value="heatmap">Календарь трат</option>
             <option value="records">Рекордные дни</option>
             <option value="forecast">Прогноз расходов</option>
+            <option value="autopay">Автооплаты: факт и ошибки</option>
+            <option value="savings">Норма сбережений по месяцам</option>
+            <option value="net">Чистый поток по месяцам</option>
+            <option value="burn">Скорость трат (14 дней)</option>
+            <option value="autopayshare">Доля автооплат в расходах</option>
           </select>
         </div>
         <div class="form-row">
@@ -2140,6 +2169,7 @@
         <label class="pdf-opt"><input type="checkbox" id="pdfIncSrc" checked><span>Таблица доходов по источникам</span></label>
         <label class="pdf-opt"><input type="checkbox" id="pdfLinked" checked><span>Совпадающие имена</span></label>
         <label class="pdf-opt"><input type="checkbox" id="pdfPlanned" checked><span>Предполагаемые траты</span></label>
+        <label class="pdf-opt"><input type="checkbox" id="pdfAutopay" checked><span>Автооплаты (правила и факты)</span></label>
         <label class="pdf-opt"><input type="checkbox" id="pdfTx"><span>Список операций</span></label>
       </div>
 
@@ -2152,6 +2182,8 @@
         <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="top"><span>Топ‑10 категорий</span></label>
         <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="accounts"><span>Структура остатков</span></label>
         <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="records"><span>Рекордные дни</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="autopay"><span>Автооплаты: успех / ошибки</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="savings"><span>Норма сбережений</span></label>
       </div>
       <div style="display:flex;gap:8px;margin-top:8px">
         <button type="button" class="btn btn-ghost btn-sm" id="pdfSelectAll" style="flex:1">Выбрать всё</button>
@@ -2694,11 +2726,14 @@
       return localISODate(d);
     }
 
-    function toast(msg) {
+    function toast(msg, ms) {
       const el = document.getElementById('toast');
+      if (!el) return;
       el.textContent = msg;
       el.classList.add('show');
-      setTimeout(() => el.classList.remove('show'), 2500);
+      clearTimeout(el._toastTimer);
+      const long = String(msg || '').length > 60;
+      el._toastTimer = setTimeout(() => el.classList.remove('show'), ms || (long ? 4500 : 2500));
     }
 
     function loadState() {
@@ -3740,6 +3775,196 @@
           `До ${formatDate(targetDate)}: ещё ~${formatMoney(projectedExtra)}, всего за период ~${formatMoney(projectedTotal)}.`;
         return;
       }
+
+      if (curiousType === 'autopay') {
+        const autoTx = expenses.filter(t => t.autopayId);
+        if (!autoTx.length) {
+          showCuriousEmpty(true);
+          document.getElementById('curiousEmpty').textContent = 'Нет операций автооплаты за период';
+          hint.textContent = 'Автооплаты появятся после срабатывания правил.';
+          return;
+        }
+        const byMonth = {};
+        autoTx.forEach(tx => {
+          const m = tx.date.slice(0, 7);
+          if (!byMonth[m]) byMonth[m] = { ok: 0, err: 0 };
+          if (tx.autopayStatus === 'error') byMonth[m].err = roundMoney(byMonth[m].err + tx.amount);
+          else byMonth[m].ok = roundMoney(byMonth[m].ok + tx.amount);
+        });
+        const labels = Object.keys(byMonth).sort();
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Успешно', data: labels.map(m => byMonth[m].ok), backgroundColor: '#16A34A' },
+              { label: 'Ошибки', data: labels.map(m => byMonth[m].err), backgroundColor: '#DC2626' }
+            ]
+          },
+          options: curiousBarOptions()
+        });
+        const okN = autoTx.filter(t => t.autopayStatus !== 'error').length;
+        const errN = autoTx.filter(t => t.autopayStatus === 'error').length;
+        hint.textContent = `Автооплаты за период: ${okN} успешных, ${errN} с ошибкой. Активных правил: ${(state.autopay || []).filter(r => r.active !== false).length}.`;
+        return;
+      }
+
+      if (curiousType === 'autopayshare') {
+        const totalExp = expenses.reduce((s, t) => s + (t.autopayStatus === 'error' ? 0 : t.amount), 0);
+        const autoOk = expenses.filter(t => t.autopayId && t.autopayStatus !== 'error')
+          .reduce((s, t) => s + t.amount, 0);
+        const rest = roundMoney(Math.max(0, totalExp - autoOk));
+        if (totalExp <= 0) return showCuriousEmpty(true);
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'doughnut',
+          data: {
+            labels: ['Автооплаты', 'Остальные расходы'],
+            datasets: [{
+              data: [roundMoney(autoOk), rest],
+              backgroundColor: ['#D97706', '#94A3B8']
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+              tooltip: {
+                callbacks: {
+                  label: ctx => {
+                    const v = ctx.raw || 0;
+                    const p = totalExp ? Math.round(v / totalExp * 100) : 0;
+                    return `${ctx.label}: ${formatMoney(v)} (${p}%)`;
+                  }
+                }
+              }
+            }
+          }
+        });
+        const pct = totalExp ? Math.round(autoOk / totalExp * 100) : 0;
+        hint.textContent = `Автооплаты = ${formatMoney(autoOk)} из ${formatMoney(totalExp)} расходов (${pct}%). Ошибки авто в сумму не входят.`;
+        return;
+      }
+
+      if (curiousType === 'savings' || curiousType === 'net') {
+        const byMonth = {};
+        incomes.forEach(tx => {
+          const m = tx.date.slice(0, 7);
+          if (!byMonth[m]) byMonth[m] = { inc: 0, exp: 0 };
+          byMonth[m].inc = roundMoney(byMonth[m].inc + tx.amount);
+        });
+        expenses.forEach(tx => {
+          if (tx.autopayStatus === 'error') return;
+          const m = tx.date.slice(0, 7);
+          if (!byMonth[m]) byMonth[m] = { inc: 0, exp: 0 };
+          byMonth[m].exp = roundMoney(byMonth[m].exp + tx.amount);
+        });
+        const labels = Object.keys(byMonth).sort();
+        if (!labels.length) return showCuriousEmpty(true);
+        if (curiousType === 'net') {
+          const data = labels.map(m => roundMoney(byMonth[m].inc - byMonth[m].exp));
+          showCuriousEmpty(false);
+          renderCuriousCanvas({
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [{
+                label: 'Чистый поток',
+                data,
+                backgroundColor: data.map(v => v >= 0 ? '#16A34A' : '#DC2626')
+              }]
+            },
+            options: curiousBarOptions()
+          });
+          hint.textContent = 'Доходы минус расходы по месяцам. Зелёный — плюс, красный — минус.';
+          return;
+        }
+        const data = labels.map(m => {
+          const inc = byMonth[m].inc;
+          if (inc <= 0) return 0;
+          return roundMoney(((inc - byMonth[m].exp) / inc) * 100);
+        });
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Сбережения %',
+              data,
+              borderColor: '#D97706',
+              backgroundColor: 'rgba(217,119,6,0.12)',
+              fill: true,
+              tension: 0.25,
+              pointRadius: 3
+            }]
+          },
+          options: {
+            ...curiousLineOptions('%'),
+            plugins: {
+              legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+              tooltip: {
+                callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw}%` }
+              }
+            },
+            scales: {
+              x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } } },
+              y: {
+                ticks: {
+                  font: { size: 10 },
+                  callback: v => v + '%'
+                }
+              }
+            }
+          }
+        });
+        hint.textContent = 'Норма сбережений = (доходы − расходы) / доходы × 100%. Месяцы без дохода = 0%.';
+        return;
+      }
+
+      if (curiousType === 'burn') {
+        const end = rangeTo && rangeTo < today() ? rangeTo : today();
+        const start = addDays(end, -13);
+        const dates = eachDate(start, end);
+        const byDay = {};
+        expenses.forEach(tx => {
+          if (tx.autopayStatus === 'error') return;
+          if (tx.date >= start && tx.date <= end) byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount;
+        });
+        const data = dates.map(d => roundMoney(byDay[d] || 0));
+        const avg = data.length ? roundMoney(data.reduce((a, b) => a + b, 0) / data.length) : 0;
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'line',
+          data: {
+            labels: dates.map(d => d.slice(5)),
+            datasets: [
+              {
+                label: 'Траты за день',
+                data,
+                borderColor: '#DC2626',
+                backgroundColor: 'rgba(220,38,38,0.08)',
+                fill: true,
+                tension: 0.2,
+                pointRadius: 2
+              },
+              {
+                label: 'Среднее',
+                data: dates.map(() => avg),
+                borderColor: '#D97706',
+                borderDash: [5, 4],
+                pointRadius: 0,
+                fill: false
+              }
+            ]
+          },
+          options: curiousLineOptions('Br')
+        });
+        hint.textContent = `Последние 14 дней до ${formatDate(end)}. Средняя скорость: ${formatMoney(avg)}/день.`;
+        return;
+      }
     }
 
     function curiousLineOptions(unit) {
@@ -4248,7 +4473,7 @@
       } catch (e) {}
       const el = document.getElementById('coachToast');
       if (!el) return;
-      el.innerHTML = html + '<br><button type="button" data-coach-dismiss="' + key + '">Понятно</button>';
+      el.innerHTML = '<span class="coach-text">' + html + '</span><button type="button" data-coach-dismiss="' + key + '">Понятно</button>';
       el.classList.add('show');
     }
 
@@ -4260,11 +4485,20 @@
 
     function showHelp(kind) {
       const map = {
-        autopay: 'Автооплата сама создаёт расход в нужный день с выбранного счёта. Если денег мало — в истории будет ошибка, баланс не тронется. Потом можно нажать ✓ и погасить вручную.',
-        planned: 'Предполагаемые траты не списывают деньги. Они показывают, сколько останется после будущих трат. Ближайшие автооплаты (до 15 дней) появляются здесь сами. Без даты — тоже видны.',
-        alloc: 'Можно погасить план частью расхода. Галочка «полное погашение» закрывает план даже если суммы не совпадают.'
+        autopay: 'Автооплата сама создаёт расход в нужный день с выбранного счёта.\n\nЕсли денег мало — в истории будет ошибка, баланс не тронется.\nПотом можно нажать ✓ и погасить вручную.',
+        planned: 'Предполагаемые траты не списывают деньги.\nОни показывают, сколько останется после будущих трат.\n\nБлижайшие автооплаты (до 15 дней) появляются здесь сами.\nБез даты — тоже видны.',
+        alloc: 'Можно погасить план частью расхода.\n\nГалочка «полное погашение» закрывает план даже если суммы не совпадают.'
       };
-      toast(map[kind] || 'Справка');
+      const text = map[kind] || 'Справка';
+      // многострочный toast: \n → переносы
+      const el = document.getElementById('toast');
+      if (!el) return;
+      el.innerHTML = text.split('\n').map(line =>
+        line ? `<div style="margin:0 0 4px">${line}</div>` : '<div style="height:6px"></div>'
+      ).join('');
+      el.classList.add('show');
+      clearTimeout(el._toastTimer);
+      el._toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
     }
 
     // ========== HISTORY ==========
@@ -6250,6 +6484,48 @@
         html += `</table></div>`;
       }
 
+      if (document.getElementById('pdfAutopay')?.checked) {
+        const rules = state.autopay || [];
+        const autoTx = expenses.filter(t => t.autopayId);
+        const okSum = autoTx.filter(t => t.autopayStatus !== 'error').reduce((s, t) => s + t.amount, 0);
+        const errSum = autoTx.filter(t => t.autopayStatus === 'error').reduce((s, t) => s + t.amount, 0);
+        html += `<div class="section"><h2>Автооплаты</h2>
+          <p style="margin:0 0 10px;color:#64748b">За период: успешно ${formatMoney(okSum)}, ошибки ${formatMoney(errSum)}, операций ${autoTx.length}. Правил: ${rules.length} (активных ${(rules.filter(r => r.active !== false).length)}).</p>
+          <table>
+          <tr><th>Статус</th><th>Категория</th><th>Счёт</th><th>Частота</th><th>Старт</th><th class="r">Сумма</th></tr>`;
+        if (!rules.length) {
+          html += `<tr><td colspan="6" class="empty">Нет правил автооплаты</td></tr>`;
+        } else {
+          rules.forEach(r => {
+            const md = r.frequency === 'monthDay' ? ` (${getAutopayMonthDay(r)}-го)` : '';
+            html += `<tr>
+              <td>${r.active === false ? 'выкл' : 'активна'}</td>
+              <td>${getCategoryLabel(r.categoryId)}</td>
+              <td>${accountLabel(r.account)}</td>
+              <td>${freqLabel(r.frequency)}${md}</td>
+              <td>${r.startDate ? formatDate(r.startDate) : '—'}</td>
+              <td class="r">${formatMoney(r.amount)}</td>
+            </tr>`;
+          });
+        }
+        html += `</table>`;
+        if (autoTx.length) {
+          html += `<table style="margin-top:12px"><tr><th>Дата</th><th>Статус</th><th>Категория</th><th>Счёт</th><th class="r">Сумма</th></tr>`;
+          autoTx.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 40).forEach(t => {
+            const cat = (t.splits && t.splits[0]) ? getCategoryLabel(t.splits[0].categoryId) : '—';
+            html += `<tr>
+              <td>${formatDate(t.date)}</td>
+              <td>${t.autopayStatus === 'error' ? 'ошибка' : 'ok'}</td>
+              <td>${cat}</td>
+              <td>${accountLabel(t.account)}</td>
+              <td class="r">${formatMoney(t.amount)}</td>
+            </tr>`;
+          });
+          html += `</table>`;
+        }
+        html += `</div>`;
+      }
+
       // Charts (multiple)
       if (charts.includes('expBars')) {
         html += pdfBarBlock('График: расходы по категориям', expCatItems.slice(0, 12));
@@ -6313,6 +6589,42 @@
         const items = Object.entries(byDay).sort((a,b)=>b[1]-a[1]).slice(0,10)
           .map(([d,v]) => ({ label: formatDate(d), value: roundMoney(v), color: '#F97316' }));
         html += pdfBarBlock('График: рекордные дни', items);
+      }
+      if (charts.includes('autopay')) {
+        const autoTx = expenses.filter(t => t.autopayId);
+        const ok = autoTx.filter(t => t.autopayStatus !== 'error').reduce((s, t) => s + t.amount, 0);
+        const err = autoTx.filter(t => t.autopayStatus === 'error').reduce((s, t) => s + t.amount, 0);
+        html += pdfBarBlock('График: автооплаты успех / ошибки', [
+          { label: 'Успешно', value: roundMoney(ok), color: '#16A34A' },
+          { label: 'Ошибки', value: roundMoney(err), color: '#DC2626' }
+        ]);
+      }
+      if (charts.includes('savings')) {
+        const map = {};
+        incomes.forEach(t => {
+          const k = t.date.slice(0, 7);
+          if (!map[k]) map[k] = { inc: 0, exp: 0 };
+          map[k].inc += t.amount;
+        });
+        expenses.forEach(t => {
+          if (t.autopayStatus === 'error') return;
+          const k = t.date.slice(0, 7);
+          if (!map[k]) map[k] = { inc: 0, exp: 0 };
+          map[k].exp += t.amount;
+        });
+        const keys = Object.keys(map).sort();
+        html += `<div class="section"><h2>График: норма сбережений</h2>`;
+        if (!keys.length) html += `<p class="empty">Нет данных</p>`;
+        else {
+          html += `<table><tr><th>Месяц</th><th class="r">Доходы</th><th class="r">Расходы</th><th class="r">Сбережения %</th></tr>`;
+          keys.forEach(k => {
+            const pct = map[k].inc > 0 ? roundMoney(((map[k].inc - map[k].exp) / map[k].inc) * 100) : 0;
+            html += `<tr><td>${k}</td><td class="r">${formatMoney(map[k].inc)}</td>
+              <td class="r">${formatMoney(map[k].exp)}</td><td class="r">${pct}%</td></tr>`;
+          });
+          html += `</table>`;
+        }
+        html += `</div>`;
       }
 
       if (document.getElementById('pdfTx')?.checked) {
