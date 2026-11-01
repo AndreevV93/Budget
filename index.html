@@ -1337,14 +1337,30 @@
             <option value="cumulative">Накопительные траты за период</option>
             <option value="frequency">Частота трат по категориям</option>
             <option value="avgcheck">Средний чек по категориям</option>
+            <option value="compare">Сравнение категорий</option>
             <option value="heatmap">Календарь трат</option>
             <option value="records">Рекордные дни</option>
             <option value="forecast">Прогноз расходов</option>
           </select>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>С даты (график)</label>
+            <input type="date" id="curiousDateFrom">
+          </div>
+          <div class="form-group">
+            <label>По дату</label>
+            <input type="date" id="curiousDateTo">
+          </div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btnCuriousUseMainPeriod" style="width:100%;margin-bottom:8px">Как в общей статистике</button>
         <div class="form-group hidden" id="curiousForecastWrap">
           <label>Прогноз до даты (пусто = конец месяца)</label>
           <input type="date" id="curiousForecastDate">
+        </div>
+        <div class="form-group hidden" id="curiousCompareWrap">
+          <label>Категории для сравнения (2+)</label>
+          <div class="filter-chips" id="curiousCompareChips"></div>
         </div>
         <div class="chart-container tall" id="curiousChartWrap">
           <canvas id="curiousChart"></canvas>
@@ -1462,7 +1478,7 @@
         <input type="number" id="plannedAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
       </div>
       <div class="form-group">
-        <label>📅 Ожидаемая дата</label>
+        <label>📅 Ожидаемая дата (необязательно)</label>
         <input type="date" id="plannedDate">
       </div>
       <div class="form-group">
@@ -1516,8 +1532,17 @@
 
     <div class="card">
       <div class="card-title">Операции <span id="histCount" class="text-muted" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+      <div class="period-tabs" id="historyPageSizeTabs" style="margin-bottom:10px">
+        <button class="period-tab active" data-hist-size="10">По 10</button>
+        <button class="period-tab" data-hist-size="20">По 20</button>
+      </div>
       <div class="tx-list" id="historyList"></div>
       <div class="empty-state hidden" id="historyEmpty">Нет операций за выбранный период</div>
+      <div id="historyPagination" class="collapse-toolbar" style="margin-top:12px;display:none">
+        <button type="button" class="btn btn-ghost" id="histPrev">← Назад</button>
+        <span id="histPageInfo" class="text-sm text-muted" style="align-self:center;flex:1;text-align:center"></span>
+        <button type="button" class="btn btn-ghost" id="histNext">Вперёд →</button>
+      </div>
     </div>
   </div>
 
@@ -1588,6 +1613,7 @@
       <div class="card-title collapsible-head">Данные <span class="collapse-chev">▼</span></div>
       <div class="collapsible-body settings-section">
         <button class="btn btn-ghost" id="btnExport" style="width:100%;margin-bottom:8px">Экспорт JSON</button>
+        <button class="btn btn-ghost" id="btnExportPdf" style="width:100%;margin-bottom:8px">Экспорт статистики в PDF</button>
         <button class="btn btn-ghost" id="btnImport" style="width:100%;margin-bottom:8px">Импорт JSON</button>
         <input type="file" id="importFile" accept=".json" class="hidden">
         <button class="btn" style="width:100%;background:#FEE2E2;color:#991B1B" id="btnClear">Очистить все данные</button>
@@ -1635,6 +1661,45 @@
         <div class="color-grid" id="colorGrid"></div>
       </div>
       <button class="btn btn-primary" id="modalSave">Сохранить</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="pdfModal">
+    <div class="modal" style="max-height:90vh;overflow:auto">
+      <div class="modal-header">
+        <h3>Экспорт в PDF</h3>
+        <button class="modal-close" id="pdfModalClose">×</button>
+      </div>
+      <p class="text-sm text-muted mb-2">Отметьте блоки. Откроется окно печати — выберите «Сохранить как PDF».</p>
+      <div class="form-group">
+        <label>Период в отчёте</label>
+        <select id="pdfPeriod">
+          <option value="month">Как «месяц» в статистике</option>
+          <option value="range">Как «период» в статистике</option>
+          <option value="all">Всё время</option>
+          <option value="custom">Свои даты</option>
+        </select>
+      </div>
+      <div class="form-row" id="pdfCustomDates" style="display:none">
+        <div class="form-group">
+          <label>С</label>
+          <input type="date" id="pdfFrom">
+        </div>
+        <div class="form-group">
+          <label>По</label>
+          <input type="date" id="pdfTo">
+        </div>
+      </div>
+      <div class="filter-section-title">Блоки отчёта</div>
+      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfBal" checked> Остатки по счетам</label>
+      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfSummary" checked> Доходы / расходы / итог за период</label>
+      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfExpCats" checked> Расходы по категориям</label>
+      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfIncSrc" checked> Доходы по источникам</label>
+      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfLinked" checked> Совпадающие имена</label>
+      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfPlanned" checked> Предполагаемые траты</label>
+      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfTx" checked> Список операций за период</label>
+      <label class="alloc-check" style="margin-bottom:6px"><input type="checkbox" id="pdfCurious"> Текущий «любопытный» график (таблица данных)</label>
+      <button class="btn btn-primary" id="btnPdfGo" style="margin-top:12px">Сформировать PDF</button>
     </div>
   </div>
 
@@ -1753,6 +1818,8 @@
       histPeriod: 'month',
       histDateFrom: null,
       histDateTo: null,
+      histPageSize: 10,
+      histPage: 1,
       statsFilterCats: [],
       statsFilterSources: []
     };
@@ -1762,6 +1829,7 @@
     let incomeChart = null;
     let curiousChart = null;
     let curiousType = 'balance';
+    let curiousCompareCats = [];
     let modalMode = null; // 'category' | 'subcategory' | 'source' | 'edit-category' | 'edit-source'
     let editingId = null;
     let parentForSub = null;
@@ -2746,22 +2814,106 @@
       curiousChart = new Chart(canvas, config);
     }
 
+    function getCuriousDateRange() {
+      const cf = document.getElementById('curiousDateFrom')?.value;
+      const ct = document.getElementById('curiousDateTo')?.value;
+      if (cf || ct) {
+        return {
+          from: cf || (state.transactions.length ? state.transactions.map(t => t.date).sort()[0] : monthAgo()),
+          to: ct || today()
+        };
+      }
+      const { from, to } = getDateRange();
+      return {
+        from: from || (state.transactions.length ? state.transactions.map(t => t.date).sort()[0] : monthAgo()),
+        to: to || today()
+      };
+    }
+
+    function filterCuriousTx(type, rangeFrom, rangeTo) {
+      return state.transactions.filter(tx => {
+        if (type && tx.type !== type) return false;
+        if (rangeFrom && tx.date < rangeFrom) return false;
+        if (rangeTo && tx.date > rangeTo) return false;
+        if (type === 'expense' && state.statsFilterCats.length) {
+          const splits = tx.splits || [];
+          if (!splits.some(sp => categoryMatchesFilter(sp.categoryId))) return false;
+        }
+        if (type === 'income' && state.statsFilterSources.length) {
+          if (!state.statsFilterSources.includes(tx.sourceId)) return false;
+        }
+        return true;
+      });
+    }
+
+    function renderCuriousCompareChips() {
+      const box = document.getElementById('curiousCompareChips');
+      if (!box) return;
+      box.innerHTML = getTopCategories().map(c => {
+        const active = curiousCompareCats.includes(c.id) ? 'active' : '';
+        return `<button type="button" class="filter-chip ${active}" data-compare-cat="${c.id}">
+          <span class="legend-dot" style="background:${c.color};display:inline-block;margin-right:4px"></span>${c.name}
+        </button>`;
+      }).join('') || '<span class="text-muted text-sm">Нет категорий</span>';
+    }
+
     function renderCuriousStats() {
       const sel = document.getElementById('curiousSelect');
       if (!sel) return;
       if (sel.value !== curiousType) sel.value = curiousType;
       const forecastWrap = document.getElementById('curiousForecastWrap');
       if (forecastWrap) forecastWrap.classList.toggle('hidden', curiousType !== 'forecast');
+      const compareWrap = document.getElementById('curiousCompareWrap');
+      if (compareWrap) {
+        compareWrap.classList.toggle('hidden', curiousType !== 'compare');
+        if (curiousType === 'compare') renderCuriousCompareChips();
+      }
 
-      const { from, to } = getDateRange();
-      const rangeFrom = from || (state.transactions.length
-        ? state.transactions.map(t => t.date).sort()[0]
-        : monthAgo());
-      const rangeTo = to || today();
+      const { from: rangeFrom, to: rangeTo } = getCuriousDateRange();
       const hint = document.getElementById('curiousHint');
 
-      const expenses = filterTx('expense');
-      const incomes = filterTx('income');
+      const expenses = filterCuriousTx('expense', rangeFrom, rangeTo);
+      const incomes = filterCuriousTx('income', rangeFrom, rangeTo);
+
+      if (curiousType === 'compare') {
+        if (curiousCompareCats.length < 2) {
+          showCuriousEmpty(true);
+          document.getElementById('curiousEmpty').textContent = 'Выберите минимум 2 категории';
+          hint.textContent = 'Отметьте категории чипами выше для сравнения сумм за диапазон графика.';
+          return;
+        }
+        const sums = {};
+        curiousCompareCats.forEach(id => { sums[id] = 0; });
+        expenses.forEach(tx => {
+          (tx.splits || []).forEach(sp => {
+            const root = getRootCategoryId(sp.categoryId);
+            if (sums[root] != null) sums[root] += sp.amount;
+            else if (sums[sp.categoryId] != null) sums[sp.categoryId] += sp.amount;
+          });
+        });
+        const labels = [];
+        const data = [];
+        const colors = [];
+        curiousCompareCats.forEach(id => {
+          const cat = getCategory(id);
+          if (!cat) return;
+          labels.push(cat.name);
+          data.push(roundMoney(sums[id] || 0));
+          colors.push(cat.color);
+        });
+        showCuriousEmpty(false);
+        document.getElementById('curiousEmpty').textContent = 'Недостаточно данных за период';
+        renderCuriousCanvas({
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{ label: 'Расход', data, backgroundColor: colors }]
+          },
+          options: curiousBarOptions()
+        });
+        hint.textContent = `Сравнение категорий с ${formatDate(rangeFrom)} по ${formatDate(rangeTo)}.`;
+        return;
+      }
 
       if (curiousType === 'heatmap') {
         renderCuriousHeatmap(rangeFrom, rangeTo, expenses, hint);
@@ -3537,12 +3689,35 @@
       const items = filterHistoryTx();
       const list = document.getElementById('historyList');
       const empty = document.getElementById('historyEmpty');
+      const pager = document.getElementById('historyPagination');
 
       const sumInc = items.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
       const sumExp = items.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
       document.getElementById('histSumIncome').textContent = formatMoney(sumInc);
       document.getElementById('histSumExpense').textContent = formatMoney(sumExp);
-      document.getElementById('histCount').textContent = items.length ? `(${items.length})` : '';
+
+      const pageSize = state.histPageSize || 10;
+      const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+      if (state.histPage > totalPages) state.histPage = totalPages;
+      if (state.histPage < 1) state.histPage = 1;
+      const start = (state.histPage - 1) * pageSize;
+      const pageItems = items.slice(start, start + pageSize);
+
+      document.getElementById('histCount').textContent = items.length
+        ? `(${items.length}, стр. ${state.histPage}/${totalPages})`
+        : '';
+
+      if (pager) {
+        if (items.length > pageSize) {
+          pager.style.display = 'flex';
+          document.getElementById('histPageInfo').textContent =
+            `${start + 1}–${Math.min(start + pageSize, items.length)} из ${items.length}`;
+          document.getElementById('histPrev').disabled = state.histPage <= 1;
+          document.getElementById('histNext').disabled = state.histPage >= totalPages;
+        } else {
+          pager.style.display = 'none';
+        }
+      }
 
       if (items.length === 0) {
         list.innerHTML = '';
@@ -3550,7 +3725,7 @@
         return;
       }
       empty.classList.add('hidden');
-      list.innerHTML = items.map(tx => {
+      list.innerHTML = pageItems.map(tx => {
         let rowInner = '';
         if (tx.type === 'transfer') {
           const dirLabel = `${accountLabel(tx.fromAccount)} → ${accountLabel(tx.toAccount)}`;
@@ -3821,7 +3996,7 @@
           <div class="pi-head">
             <div>
               <div class="pi-title">${p.note || catLabel}</div>
-              <div class="pi-meta">${formatDate(p.date || today())} · ${catLabel} · ${formatMoney(p.amount)}
+              <div class="pi-meta">${p.date ? formatDate(p.date) : 'без даты'} · ${catLabel} · ${formatMoney(p.amount)}
                 ${covered > 0 ? ` · погашено ${formatMoney(covered)}` : ''}
                 ${!closed ? ` · осталось ${formatMoney(rem)}` : ''}
               </div>
@@ -4025,8 +4200,6 @@
             fillPlannedCategorySelect();
             renderPlannedList();
             renderExpenseAllocList();
-            const pd = document.getElementById('plannedDate');
-            if (pd && !pd.value) pd.value = today();
             if (!document.querySelector('#splitsList .split-row')) addSplitRow();
           }
           if (btn.dataset.screen === 'history') renderHistory();
@@ -4056,6 +4229,24 @@
       document.getElementById('curiousForecastDate').addEventListener('change', () => {
         if (curiousType === 'forecast') renderCuriousStats();
       });
+      document.getElementById('curiousDateFrom').addEventListener('change', () => renderCuriousStats());
+      document.getElementById('curiousDateTo').addEventListener('change', () => renderCuriousStats());
+      document.getElementById('btnCuriousUseMainPeriod').addEventListener('click', () => {
+        const { from, to } = getDateRange();
+        document.getElementById('curiousDateFrom').value = from || '';
+        document.getElementById('curiousDateTo').value = to || '';
+        renderCuriousStats();
+        toast('Диапазон графика как в общей статистике');
+      });
+      document.addEventListener('click', e => {
+        const chip = e.target.closest('[data-compare-cat]');
+        if (!chip) return;
+        const id = chip.dataset.compareCat;
+        const i = curiousCompareCats.indexOf(id);
+        if (i >= 0) curiousCompareCats.splice(i, 1);
+        else curiousCompareCats.push(id);
+        renderCuriousStats();
+      });
 
       document.getElementById('btnCollapseAll').addEventListener('click', () => {
         document.querySelectorAll('#screen-stats .collapsible-card').forEach(c => c.classList.add('collapsed'));
@@ -4076,10 +4267,10 @@
         if (card) card.classList.toggle('collapsed');
       });
 
-      // Period
-      document.querySelectorAll('.period-tab').forEach(tab => {
+      // Period (только вкладки периода на статистике)
+      document.querySelectorAll('#screen-stats > .period-tabs .period-tab').forEach(tab => {
         tab.addEventListener('click', () => {
-          document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('#screen-stats > .period-tabs .period-tab').forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
           state.period = tab.dataset.period;
           document.getElementById('dateRange').classList.toggle('show', state.period === 'range');
@@ -4106,6 +4297,7 @@
           document.querySelectorAll('#historyTypeTabs .period-tab').forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
           state.histType = tab.dataset.histType;
+          state.histPage = 1;
           renderHistory();
         });
       });
@@ -4121,16 +4313,41 @@
             document.getElementById('historyDateFrom').value = state.histDateFrom || monthAgo();
             document.getElementById('historyDateTo').value = state.histDateTo || today();
           }
+          state.histPage = 1;
           renderHistory();
         });
       });
 
+      document.querySelectorAll('#historyPageSizeTabs .period-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('#historyPageSizeTabs .period-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          state.histPageSize = parseInt(tab.dataset.histSize, 10) || 10;
+          state.histPage = 1;
+          renderHistory();
+        });
+      });
+      document.getElementById('histPrev').addEventListener('click', () => {
+        if (state.histPage > 1) {
+          state.histPage--;
+          renderHistory();
+          document.getElementById('screen-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+      document.getElementById('histNext').addEventListener('click', () => {
+        state.histPage++;
+        renderHistory();
+        document.getElementById('screen-history')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
       document.getElementById('historyDateFrom').addEventListener('change', e => {
         state.histDateFrom = e.target.value;
+        state.histPage = 1;
         renderHistory();
       });
       document.getElementById('historyDateTo').addEventListener('change', e => {
         state.histDateTo = e.target.value;
+        state.histPage = 1;
         renderHistory();
       });
 
@@ -4249,7 +4466,7 @@
 
       document.getElementById('btnAddPlanned').addEventListener('click', () => {
         const amount = roundMoney(document.getElementById('plannedAmount').value);
-        const date = document.getElementById('plannedDate').value || today();
+        const dateVal = document.getElementById('plannedDate').value;
         const note = document.getElementById('plannedNote').value.trim();
         const categoryId = document.getElementById('plannedCategory').value;
         if (!amount || amount <= 0) return toast('Введите сумму');
@@ -4258,13 +4475,14 @@
         state.planned.push({
           id: uid(),
           amount,
-          date,
+          date: dateVal || undefined,
           note: note || undefined,
           splits: [{ categoryId, amount, note: note || undefined }]
         });
         saveState();
         document.getElementById('plannedAmount').value = '';
         document.getElementById('plannedNote').value = '';
+        document.getElementById('plannedDate').value = '';
         renderPlannedList();
         renderExpenseAllocList();
         renderAccountBalances();
@@ -4560,6 +4778,23 @@
       });
 
       // Export / Import
+      document.getElementById('btnExportPdf').addEventListener('click', () => {
+        document.getElementById('pdfModal').classList.add('show');
+      });
+      document.getElementById('pdfModalClose').addEventListener('click', () => {
+        document.getElementById('pdfModal').classList.remove('show');
+      });
+      document.getElementById('pdfModal').addEventListener('click', e => {
+        if (e.target.id === 'pdfModal') document.getElementById('pdfModal').classList.remove('show');
+      });
+      document.getElementById('pdfPeriod').addEventListener('change', e => {
+        document.getElementById('pdfCustomDates').style.display = e.target.value === 'custom' ? 'flex' : 'none';
+      });
+      document.getElementById('btnPdfGo').addEventListener('click', () => {
+        exportStatsPdf();
+        document.getElementById('pdfModal').classList.remove('show');
+      });
+
       document.getElementById('btnExport').addEventListener('click', () => {
         const data = {
           categories: state.categories,
@@ -4637,6 +4872,191 @@
           toast('Данные очищены');
         }
       });
+    }
+
+    function getPdfDateRange() {
+      const mode = document.getElementById('pdfPeriod')?.value || 'month';
+      if (mode === 'custom') {
+        return {
+          from: document.getElementById('pdfFrom').value || null,
+          to: document.getElementById('pdfTo').value || null
+        };
+      }
+      if (mode === 'all') return { from: null, to: null };
+      if (mode === 'range') {
+        return {
+          from: state.dateFrom || monthAgo(),
+          to: state.dateTo || today()
+        };
+      }
+      // month
+      return { from: monthAgo(), to: today() };
+    }
+
+    function exportStatsPdf() {
+      const { from, to } = getPdfDateRange();
+      const tx = state.transactions.filter(t => {
+        if (from && t.date < from) return false;
+        if (to && t.date > to) return false;
+        return true;
+      });
+      const expenses = tx.filter(t => t.type === 'expense');
+      const incomes = tx.filter(t => t.type === 'income');
+      const bal = getAccountBalances();
+      const total = roundMoney(bal.visa + bal.mastercard + bal.cash);
+      const sumInc = incomes.reduce((s, t) => s + t.amount, 0);
+      const sumExp = expenses.reduce((s, t) => s + t.amount, 0);
+
+      const periodLabel = from || to
+        ? `${from ? formatDate(from) : '…'} — ${to ? formatDate(to) : '…'}`
+        : 'Всё время';
+
+      let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Статистика бюджета</title>
+        <style>
+          body{font-family:system-ui,sans-serif;padding:24px;color:#0f172a;font-size:13px}
+          h1{font-size:18px;margin:0 0 4px} h2{font-size:14px;margin:18px 0 8px;border-bottom:1px solid #e2e8f0;padding-bottom:4px}
+          .muted{color:#64748b;font-size:12px;margin-bottom:16px}
+          table{width:100%;border-collapse:collapse;margin-bottom:8px}
+          th,td{border:1px solid #e2e8f0;padding:6px 8px;text-align:left}
+          th{background:#f8fafc}
+          .r{text-align:right}
+          @media print{body{padding:12px}}
+        </style></head><body>
+        <h1>Бюджет — отчёт</h1>
+        <div class="muted">Период: ${periodLabel} · сформировано ${formatDate(today())}</div>`;
+
+      if (document.getElementById('pdfBal')?.checked) {
+        html += `<h2>Остатки</h2><table>
+          <tr><th>Visa</th><th>MasterCard</th><th>Наличные</th><th>Всего</th></tr>
+          <tr><td class="r">${formatMoney(bal.visa)}</td><td class="r">${formatMoney(bal.mastercard)}</td>
+          <td class="r">${formatMoney(bal.cash)}</td><td class="r"><b>${formatMoney(total)}</b></td></tr></table>`;
+        const openP = getOpenPlannedSum();
+        html += `<p>Предполагаемые (открытые): <b>${formatMoney(openP)}</b> · Останется после: <b>${formatMoney(total - openP)}</b></p>`;
+      }
+
+      if (document.getElementById('pdfSummary')?.checked) {
+        html += `<h2>Итоги периода</h2><table>
+          <tr><th>Доходы</th><th>Расходы</th><th>Разница</th></tr>
+          <tr><td class="r">${formatMoney(sumInc)}</td><td class="r">${formatMoney(sumExp)}</td>
+          <td class="r"><b>${formatMoney(sumInc - sumExp)}</b></td></tr></table>`;
+      }
+
+      if (document.getElementById('pdfExpCats')?.checked) {
+        const by = {};
+        expenses.forEach(t => (t.splits || []).forEach(sp => {
+          const r = getRootCategoryId(sp.categoryId);
+          by[r] = (by[r] || 0) + sp.amount;
+        }));
+        const rows = Object.entries(by).sort((a, b) => b[1] - a[1]);
+        html += `<h2>Расходы по категориям</h2><table><tr><th>Категория</th><th class="r">Сумма</th></tr>`;
+        rows.forEach(([id, sum]) => {
+          const c = getCategory(id);
+          html += `<tr><td>${c ? c.name : '—'}</td><td class="r">${formatMoney(sum)}</td></tr>`;
+        });
+        if (!rows.length) html += `<tr><td colspan="2">Нет данных</td></tr>`;
+        html += `</table>`;
+      }
+
+      if (document.getElementById('pdfIncSrc')?.checked) {
+        const by = {};
+        incomes.forEach(t => { by[t.sourceId] = (by[t.sourceId] || 0) + t.amount; });
+        html += `<h2>Доходы по источникам</h2><table><tr><th>Источник</th><th class="r">Сумма</th></tr>`;
+        Object.entries(by).forEach(([id, sum]) => {
+          const s = state.sources.find(x => x.id === id);
+          html += `<tr><td>${s ? s.name : '—'}</td><td class="r">${formatMoney(sum)}</td></tr>`;
+        });
+        if (!Object.keys(by).length) html += `<tr><td colspan="2">Нет данных</td></tr>`;
+        html += `</table>`;
+      }
+
+      if (document.getElementById('pdfLinked')?.checked) {
+        const linked = getLinkedNames();
+        html += `<h2>Совпадающие имена</h2><table><tr><th>Имя</th><th class="r">Приход</th><th class="r">Расход</th><th class="r">Разница</th></tr>`;
+        linked.forEach(item => {
+          const inc = incomes.filter(tx => {
+            const src = state.sources.find(s => s.id === tx.sourceId);
+            return src && normalizeName(src.name) === item.key;
+          }).reduce((s, t) => s + t.amount, 0);
+          let exp = 0;
+          expenses.forEach(tx => (tx.splits || []).forEach(sp => {
+            const cat = getCategory(sp.categoryId);
+            if (cat && normalizeName(cat.name) === item.key) exp += sp.amount;
+          }));
+          if (inc || exp) {
+            html += `<tr><td>${item.displayName}</td><td class="r">${formatMoney(inc)}</td>
+              <td class="r">${formatMoney(exp)}</td><td class="r">${formatMoney(inc - exp)}</td></tr>`;
+          }
+        });
+        html += `</table>`;
+      }
+
+      if (document.getElementById('pdfPlanned')?.checked) {
+        html += `<h2>Предполагаемые траты</h2><table><tr><th>Статус</th><th>Дата</th><th>Описание</th><th class="r">Сумма</th><th class="r">Остаток</th></tr>`;
+        (state.planned || []).forEach(p => {
+          const rem = getPlannedRemaining(p);
+          const closed = rem <= 0.009;
+          const catLabel = (p.splits && p.splits[0]) ? getCategoryLabel(p.splits[0].categoryId) : '—';
+          html += `<tr><td>${closed ? 'закрыта' : 'открыта'}</td><td>${p.date ? formatDate(p.date) : '—'}</td>
+            <td>${p.note || catLabel}</td><td class="r">${formatMoney(p.amount)}</td><td class="r">${formatMoney(Math.max(0, rem))}</td></tr>`;
+        });
+        if (!(state.planned || []).length) html += `<tr><td colspan="5">Нет</td></tr>`;
+        html += `</table>`;
+      }
+
+      if (document.getElementById('pdfTx')?.checked) {
+        html += `<h2>Операции</h2><table><tr><th>Дата</th><th>Тип</th><th>Описание</th><th class="r">Сумма</th></tr>`;
+        tx.slice().sort((a, b) => b.date.localeCompare(a.date)).forEach(t => {
+          let desc = '';
+          if (t.type === 'income') {
+            const s = state.sources.find(x => x.id === t.sourceId);
+            desc = s ? s.name : 'Доход';
+          } else if (t.type === 'expense') {
+            desc = (t.splits || []).map(sp => getCategoryLabel(sp.categoryId)).join(', ');
+          } else {
+            desc = `${accountLabel(t.fromAccount)} → ${accountLabel(t.toAccount)}`;
+          }
+          if (t.note) desc += ' · ' + t.note;
+          const typeL = t.type === 'income' ? 'Доход' : t.type === 'expense' ? 'Расход' : 'Перевод';
+          const sign = t.type === 'income' ? '+' : t.type === 'expense' ? '−' : '';
+          html += `<tr><td>${formatDate(t.date)}</td><td>${typeL}</td><td>${desc}</td><td class="r">${sign}${formatMoney(t.amount)}</td></tr>`;
+        });
+        if (!tx.length) html += `<tr><td colspan="4">Нет операций</td></tr>`;
+        html += `</table>`;
+      }
+
+      if (document.getElementById('pdfCurious')?.checked) {
+        const names = {
+          balance: 'Динамика баланса', months: 'Доходы vs расходы', top: 'Топ категорий',
+          weekday: 'По дням недели', cumulative: 'Накопительные', frequency: 'Частота',
+          avgcheck: 'Средний чек', compare: 'Сравнение категорий', heatmap: 'Календарь',
+          records: 'Рекордные дни', forecast: 'Прогноз'
+        };
+        html += `<h2>Любопытная статистика: ${names[curiousType] || curiousType}</h2>`;
+        html += `<p class="muted">См. приложение / экран статистики для графика. Тип: ${curiousType}.</p>`;
+        if (curiousType === 'top' || curiousType === 'compare') {
+          const by = {};
+          expenses.forEach(t => (t.splits || []).forEach(sp => {
+            const r = getRootCategoryId(sp.categoryId);
+            by[r] = (by[r] || 0) + sp.amount;
+          }));
+          html += `<table><tr><th>Категория</th><th class="r">Сумма</th></tr>`;
+          Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 15).forEach(([id, sum]) => {
+            html += `<tr><td>${getCategory(id)?.name || '—'}</td><td class="r">${formatMoney(sum)}</td></tr>`;
+          });
+          html += `</table>`;
+        }
+      }
+
+      html += `</body></html>`;
+      const w = window.open('', '_blank');
+      if (!w) {
+        toast('Разрешите всплывающие окна для экспорта');
+        return;
+      }
+      w.document.write(html);
+      w.document.close();
+      setTimeout(() => { w.focus(); w.print(); }, 300);
+      toast('Откройте «Сохранить как PDF» в печати');
     }
 
     function renderAll() {
