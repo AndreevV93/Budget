@@ -209,6 +209,56 @@
       height: 220px;
       margin: 8px 0;
     }
+    .chart-container.tall {
+      height: 280px;
+    }
+    .curious-hint {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 8px;
+      line-height: 1.4;
+    }
+    .heatmap {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-top: 10px;
+    }
+    .heatmap-head {
+      font-size: 0.65rem;
+      text-align: center;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+    .heatmap-cell {
+      aspect-ratio: 1;
+      border-radius: 6px;
+      background: #F1F5F9;
+      font-size: 0.65rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748B;
+      min-height: 28px;
+    }
+    .heatmap-cell.has {
+      color: #fff;
+      font-weight: 600;
+    }
+    .heatmap-legend {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    .heatmap-legend span.box {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      display: inline-block;
+    }
 
     .chart-legend {
       display: flex;
@@ -1011,6 +1061,104 @@
     .account-option .opt-icon {
       font-size: 1.1rem;
     }
+
+    .split-row {
+      flex-wrap: wrap;
+    }
+    .split-row .split-note {
+      flex: 1 1 100%;
+      width: 100%;
+      margin-top: 4px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+    .planned-summary {
+      background: #FFF7ED;
+      border: 1px solid #FED7AA;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-top: 10px;
+    }
+    .planned-summary .ps-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.9rem;
+      padding: 3px 0;
+    }
+    .planned-summary .ps-row strong { font-weight: 700; }
+    .planned-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      background: #fff;
+    }
+    .planned-item.closed {
+      opacity: 0.75;
+      background: #F0FDF4;
+      border-color: #BBF7D0;
+    }
+    .planned-item .pi-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .planned-item .pi-title { font-weight: 600; font-size: 0.92rem; }
+    .planned-item .pi-meta { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; }
+    .planned-item .pi-badge {
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: #FFEDD5;
+      color: #C2410C;
+      white-space: nowrap;
+    }
+    .planned-item.closed .pi-badge {
+      background: #DCFCE7;
+      color: #15803D;
+    }
+    .planned-item .pi-covers {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      padding-left: 8px;
+      border-left: 3px solid #BBF7D0;
+    }
+    .alloc-list { margin-top: 8px; }
+    .alloc-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 6px;
+      background: #F8FAFC;
+      font-size: 0.85rem;
+    }
+    .alloc-row input[type="number"] {
+      width: 88px;
+      padding: 6px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+    }
+    .alloc-row label.alloc-check {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -1047,6 +1195,10 @@
       </div>
       <div class="text-sm text-muted text-center" style="margin-top:8px" id="balTotalHint">
         Всего на руках: 0 Br
+      </div>
+      <div class="planned-summary" id="plannedSummaryBox">
+        <div class="ps-row"><span>Предполагаемые (открытые)</span><strong id="plannedOpenSum">0 Br</strong></div>
+        <div class="ps-row"><span>Останется после них</span><strong id="plannedAfterSum">0 Br</strong></div>
       </div>
       <div class="text-sm text-muted text-center" style="margin-top:4px;font-size:0.75rem" id="balCheckHint"></div>
 
@@ -1171,6 +1323,37 @@
         </div>
       </div>
     </div>
+
+    <div class="card collapsible-card" data-collapse-key="curious">
+      <div class="card-title collapsible-head">Любопытная статистика <span class="collapse-chev">▼</span></div>
+      <div class="collapsible-body">
+        <div class="form-group">
+          <label>График</label>
+          <select id="curiousSelect">
+            <option value="balance">Динамика баланса</option>
+            <option value="months">Доходы vs расходы по месяцам</option>
+            <option value="top">Топ категорий</option>
+            <option value="weekday">Средний расход по дням недели</option>
+            <option value="cumulative">Накопительные траты за период</option>
+            <option value="frequency">Частота трат по категориям</option>
+            <option value="avgcheck">Средний чек по категориям</option>
+            <option value="heatmap">Календарь трат</option>
+            <option value="records">Рекордные дни</option>
+            <option value="forecast">Прогноз расходов</option>
+          </select>
+        </div>
+        <div class="form-group hidden" id="curiousForecastWrap">
+          <label>Прогноз до даты (пусто = конец месяца)</label>
+          <input type="date" id="curiousForecastDate">
+        </div>
+        <div class="chart-container tall" id="curiousChartWrap">
+          <canvas id="curiousChart"></canvas>
+        </div>
+        <div id="curiousHeatmap" class="hidden"></div>
+        <div class="curious-hint" id="curiousHint"></div>
+        <div class="empty-state hidden" id="curiousEmpty">Недостаточно данных за период</div>
+      </div>
+    </div>
   </div>
 
   <!-- SCREEN: Income -->
@@ -1259,11 +1442,40 @@
       <button class="btn btn-add" id="btnAddSplit">+ Добавить категорию</button>
 
       <div class="form-group mt-2">
-        <label>Заметка (необязательно)</label>
+        <label>Общая заметка (необязательно)</label>
         <input type="text" id="expenseNote" placeholder="Например: продукты">
       </div>
+
+      <div class="card-title" style="margin-top:14px">Погашение предполагаемых</div>
+      <p class="text-sm text-muted mb-2">Отметьте план и сумму (или «полностью»). Не списывается сверху — это связь с планом.</p>
+      <div class="alloc-list" id="expenseAllocList"></div>
+
       <button class="btn btn-primary" id="btnAddExpense" style="margin-top:8px">Добавить расход</button>
       <button class="btn btn-ghost hidden" id="btnCancelExpenseEdit" style="width:100%;margin-top:8px">Отмена редактирования</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Предполагаемые траты</div>
+      <p class="text-sm text-muted mb-2">Не вычитаются из счетов, пока не погасите обычным расходом.</p>
+      <div class="form-group">
+        <label>Сумма (Br)</label>
+        <input type="number" id="plannedAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>📅 Ожидаемая дата</label>
+        <input type="date" id="plannedDate">
+      </div>
+      <div class="form-group">
+        <label>Категория</label>
+        <select id="plannedCategory"></select>
+      </div>
+      <div class="form-group">
+        <label>Заметка</label>
+        <input type="text" id="plannedNote" placeholder="Например: интернет, кредит">
+      </div>
+      <button class="btn btn-secondary" id="btnAddPlanned" style="width:100%">Добавить предполагаемую</button>
+      <div class="mt-2" id="plannedList"></div>
+      <div class="empty-state hidden" id="plannedListEmpty">Нет предполагаемых трат</div>
     </div>
 
     <div class="card">
@@ -1531,6 +1743,7 @@
       categories: [],
       sources: [],
       transactions: [],
+      planned: [],
       initialBalances: { visa: 0, mastercard: 0, cash: 0 },
       setupComplete: false,
       period: 'month',
@@ -1547,6 +1760,8 @@
     let syncConfig = { binId: '', masterKey: '', lastSync: null };
     let expenseChart = null;
     let incomeChart = null;
+    let curiousChart = null;
+    let curiousType = 'balance';
     let modalMode = null; // 'category' | 'subcategory' | 'source' | 'edit-category' | 'edit-source'
     let editingId = null;
     let parentForSub = null;
@@ -1956,6 +2171,7 @@
           state.categories = data.categories || [...DEFAULT_CATEGORIES];
           state.sources = data.sources || [...DEFAULT_SOURCES];
           state.transactions = data.transactions || [];
+          state.planned = data.planned || [];
           state.initialBalances = data.initialBalances || { visa: 0, mastercard: 0, cash: 0 };
           // migrate old card → visa
           if (state.initialBalances.card != null && state.initialBalances.visa == null) {
@@ -1987,6 +2203,7 @@
           state.categories = [...DEFAULT_CATEGORIES];
           state.sources = [...DEFAULT_SOURCES];
           state.transactions = [];
+          state.planned = [];
           state.initialBalances = { visa: 0, mastercard: 0, cash: 0 };
           state.setupComplete = false;
         }
@@ -1994,6 +2211,7 @@
         state.categories = [...DEFAULT_CATEGORIES];
         state.sources = [...DEFAULT_SOURCES];
         state.transactions = [];
+        state.planned = [];
         state.initialBalances = { visa: 0, mastercard: 0, cash: 0 };
         state.setupComplete = false;
       }
@@ -2011,6 +2229,7 @@
         categories: state.categories,
         sources: state.sources,
         transactions: state.transactions,
+        planned: state.planned,
         initialBalances: state.initialBalances,
         setupComplete: state.setupComplete
       }));
@@ -2033,6 +2252,7 @@
         categories: state.categories,
         sources: state.sources,
         transactions: state.transactions,
+        planned: state.planned,
         initialBalances: state.initialBalances,
         setupComplete: state.setupComplete,
         updatedAt: new Date().toISOString()
@@ -2102,6 +2322,7 @@
         if (data.categories) state.categories = data.categories;
         if (data.sources) state.sources = data.sources;
         if (data.transactions) state.transactions = data.transactions;
+        if (data.planned) state.planned = data.planned;
         if (data.initialBalances) state.initialBalances = data.initialBalances;
         if (data.setupComplete !== undefined) state.setupComplete = !!data.setupComplete;
         state.transactions.forEach(tx => {
@@ -2317,6 +2538,16 @@
       const hint = document.getElementById('balTotalHint');
       if (hint) hint.textContent = `Всего на руках: ${formatMoney(total)}`;
 
+      const openPlanned = getOpenPlannedSum();
+      const after = roundMoney(total - openPlanned);
+      const elOpen = document.getElementById('plannedOpenSum');
+      const elAfter = document.getElementById('plannedAfterSum');
+      if (elOpen) elOpen.textContent = formatMoney(openPlanned);
+      if (elAfter) {
+        elAfter.textContent = formatMoney(after);
+        elAfter.style.color = after < 0 ? 'var(--expense)' : 'var(--income)';
+      }
+
       const init = roundMoney(
         (state.initialBalances.visa || 0) +
         (state.initialBalances.mastercard || 0) +
@@ -2431,6 +2662,501 @@
         incCanvas.style.display = 'block';
         renderPie('incomeChart', incLabels, incData, incColors, 'income');
         renderLegend('incomeLegend', incLabels, incData, incColors);
+      }
+
+      renderCuriousStats();
+    }
+
+    // ========== CURIOUS STATS ==========
+    function endOfMonth(dateStr) {
+      const d = new Date((dateStr || today()) + 'T12:00:00');
+      const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      return last.toISOString().slice(0, 10);
+    }
+
+    function addDays(dateStr, n) {
+      const d = new Date(dateStr + 'T12:00:00');
+      d.setDate(d.getDate() + n);
+      return d.toISOString().slice(0, 10);
+    }
+
+    function daysBetween(a, b) {
+      const da = new Date(a + 'T12:00:00');
+      const db = new Date(b + 'T12:00:00');
+      return Math.max(0, Math.round((db - da) / 86400000));
+    }
+
+    function getTotalBalanceBefore(dateStr) {
+      let bal = roundMoney(
+        (state.initialBalances.visa || 0) +
+        (state.initialBalances.mastercard || 0) +
+        (state.initialBalances.cash || 0)
+      );
+      state.transactions
+        .filter(tx => tx.date < dateStr)
+        .sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id))
+        .forEach(tx => {
+          if (tx.type === 'income') bal = roundMoney(bal + tx.amount);
+          if (tx.type === 'expense') bal = roundMoney(bal - tx.amount);
+        });
+      return bal;
+    }
+
+    function eachDate(from, to) {
+      const out = [];
+      if (!from || !to || from > to) return out;
+      let d = from;
+      while (d <= to) {
+        out.push(d);
+        d = addDays(d, 1);
+        if (out.length > 800) break;
+      }
+      return out;
+    }
+
+    function destroyCuriousChart() {
+      if (curiousChart) {
+        curiousChart.destroy();
+        curiousChart = null;
+      }
+    }
+
+    function showCuriousEmpty(show) {
+      const empty = document.getElementById('curiousEmpty');
+      const wrap = document.getElementById('curiousChartWrap');
+      const heat = document.getElementById('curiousHeatmap');
+      if (show) {
+        empty.classList.remove('hidden');
+        wrap.classList.add('hidden');
+        heat.classList.add('hidden');
+        destroyCuriousChart();
+      } else {
+        empty.classList.add('hidden');
+      }
+    }
+
+    function renderCuriousCanvas(config) {
+      const canvas = document.getElementById('curiousChart');
+      const wrap = document.getElementById('curiousChartWrap');
+      const heat = document.getElementById('curiousHeatmap');
+      wrap.classList.remove('hidden');
+      heat.classList.add('hidden');
+      heat.innerHTML = '';
+      destroyCuriousChart();
+      curiousChart = new Chart(canvas, config);
+    }
+
+    function renderCuriousStats() {
+      const sel = document.getElementById('curiousSelect');
+      if (!sel) return;
+      if (sel.value !== curiousType) sel.value = curiousType;
+      const forecastWrap = document.getElementById('curiousForecastWrap');
+      if (forecastWrap) forecastWrap.classList.toggle('hidden', curiousType !== 'forecast');
+
+      const { from, to } = getDateRange();
+      const rangeFrom = from || (state.transactions.length
+        ? state.transactions.map(t => t.date).sort()[0]
+        : monthAgo());
+      const rangeTo = to || today();
+      const hint = document.getElementById('curiousHint');
+
+      const expenses = filterTx('expense');
+      const incomes = filterTx('income');
+
+      if (curiousType === 'heatmap') {
+        renderCuriousHeatmap(rangeFrom, rangeTo, expenses, hint);
+        return;
+      }
+
+      if (curiousType === 'balance') {
+        const dates = eachDate(rangeFrom, rangeTo);
+        if (!dates.length) return showCuriousEmpty(true);
+        let bal = getTotalBalanceBefore(rangeFrom);
+        const byDay = {};
+        state.transactions.filter(tx => tx.date >= rangeFrom && tx.date <= rangeTo).forEach(tx => {
+          if (!byDay[tx.date]) byDay[tx.date] = 0;
+          if (tx.type === 'income') byDay[tx.date] += tx.amount;
+          if (tx.type === 'expense') byDay[tx.date] -= tx.amount;
+        });
+        const data = dates.map(d => {
+          bal = roundMoney(bal + (byDay[d] || 0));
+          return bal;
+        });
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'line',
+          data: {
+            labels: dates.map(d => d.slice(5)),
+            datasets: [{
+              label: 'Баланс',
+              data,
+              borderColor: '#4F46E5',
+              backgroundColor: 'rgba(79,70,229,0.12)',
+              fill: true,
+              tension: 0.25,
+              pointRadius: dates.length > 40 ? 0 : 2
+            }]
+          },
+          options: curiousLineOptions('Br')
+        });
+        hint.textContent = `Остаток на руках (все счета) с ${formatDate(rangeFrom)} по ${formatDate(rangeTo)}.`;
+        return;
+      }
+
+      if (curiousType === 'months') {
+        const map = {};
+        const add = (tx, field) => {
+          const key = tx.date.slice(0, 7);
+          if (!map[key]) map[key] = { inc: 0, exp: 0 };
+          map[key][field] += tx.amount;
+        };
+        incomes.forEach(t => add(t, 'inc'));
+        expenses.forEach(t => add(t, 'exp'));
+        const keys = Object.keys(map).sort();
+        if (!keys.length) return showCuriousEmpty(true);
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'bar',
+          data: {
+            labels: keys,
+            datasets: [
+              { label: 'Доходы', data: keys.map(k => map[k].inc), backgroundColor: '#16A34A' },
+              { label: 'Расходы', data: keys.map(k => map[k].exp), backgroundColor: '#DC2626' }
+            ]
+          },
+          options: curiousBarOptions()
+        });
+        hint.textContent = 'Сравнение доходов и расходов по месяцам выбранного периода.';
+        return;
+      }
+
+      if (curiousType === 'top' || curiousType === 'frequency' || curiousType === 'avgcheck') {
+        const byRoot = {};
+        const countRoot = {};
+        expenses.forEach(tx => {
+          (tx.splits || []).forEach(sp => {
+            if (state.statsFilterCats.length && !categoryMatchesFilter(sp.categoryId)) return;
+            const root = getRootCategoryId(sp.categoryId);
+            byRoot[root] = (byRoot[root] || 0) + sp.amount;
+            countRoot[root] = (countRoot[root] || 0) + 1;
+          });
+        });
+        let entries = Object.keys(byRoot).map(id => {
+          const cat = getCategory(id);
+          const sum = byRoot[id];
+          const cnt = countRoot[id] || 1;
+          return {
+            id,
+            name: cat ? cat.name : '—',
+            color: cat ? cat.color : '#94A3B8',
+            sum,
+            cnt,
+            avg: sum / cnt
+          };
+        });
+        if (curiousType === 'top') entries.sort((a, b) => b.sum - a.sum);
+        if (curiousType === 'frequency') entries.sort((a, b) => b.cnt - a.cnt);
+        if (curiousType === 'avgcheck') entries.sort((a, b) => b.avg - a.avg);
+        entries = entries.slice(0, 10);
+        if (!entries.length) return showCuriousEmpty(true);
+        showCuriousEmpty(false);
+        const labels = entries.map(e => e.name);
+        const data = entries.map(e =>
+          curiousType === 'frequency' ? e.cnt : curiousType === 'avgcheck' ? roundMoney(e.avg) : e.sum
+        );
+        const colors = entries.map(e => e.color);
+        renderCuriousCanvas({
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: curiousType === 'frequency' ? 'Число разбиений' : curiousType === 'avgcheck' ? 'Средний чек' : 'Сумма',
+              data,
+              backgroundColor: colors
+            }]
+          },
+          options: {
+            ...curiousBarOptions(),
+            indexAxis: 'y'
+          }
+        });
+        if (curiousType === 'top') hint.textContent = 'Топ категорий по сумме трат за период.';
+        else if (curiousType === 'frequency') hint.textContent = 'Сколько раз категория встречалась в разбивках расходов (не число чеков).';
+        else hint.textContent = 'Средняя сумма на одно вхождение категории в разбивке.';
+        return;
+      }
+
+      if (curiousType === 'weekday') {
+        const names = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        const sums = [0, 0, 0, 0, 0, 0, 0];
+        const counts = [0, 0, 0, 0, 0, 0, 0];
+        expenses.forEach(tx => {
+          const wd = new Date(tx.date + 'T12:00:00').getDay();
+          sums[wd] += tx.amount;
+          counts[wd] += 1;
+        });
+        // reorder Mon-Sun
+        const order = [1, 2, 3, 4, 5, 6, 0];
+        const labels = order.map(i => names[i]);
+        const data = order.map(i => counts[i] ? roundMoney(sums[i] / counts[i]) : 0);
+        if (!expenses.length) return showCuriousEmpty(true);
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Средний расход',
+              data,
+              backgroundColor: '#0EA5E9'
+            }]
+          },
+          options: curiousBarOptions()
+        });
+        hint.textContent = 'Средняя сумма одного расхода в этот день недели.';
+        return;
+      }
+
+      if (curiousType === 'cumulative') {
+        const dates = eachDate(rangeFrom, rangeTo);
+        if (!dates.length) return showCuriousEmpty(true);
+        const byDay = {};
+        expenses.forEach(tx => {
+          byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount;
+        });
+        let run = 0;
+        const data = dates.map(d => {
+          run = roundMoney(run + (byDay[d] || 0));
+          return run;
+        });
+        if (run === 0 && !expenses.length) return showCuriousEmpty(true);
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'line',
+          data: {
+            labels: dates.map(d => d.slice(5)),
+            datasets: [{
+              label: 'Накопительно',
+              data,
+              borderColor: '#DC2626',
+              backgroundColor: 'rgba(220,38,38,0.1)',
+              fill: true,
+              tension: 0.2,
+              pointRadius: dates.length > 40 ? 0 : 2
+            }]
+          },
+          options: curiousLineOptions('Br')
+        });
+        hint.textContent = `Накопительная сумма расходов с ${formatDate(rangeFrom)}. Итого: ${formatMoney(run)}.`;
+        return;
+      }
+
+      if (curiousType === 'records') {
+        const byDay = {};
+        expenses.forEach(tx => {
+          byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount;
+        });
+        const entries = Object.entries(byDay).sort((a, b) => b[1] - a[1]).slice(0, 10);
+        if (!entries.length) return showCuriousEmpty(true);
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'bar',
+          data: {
+            labels: entries.map(([d]) => formatDate(d)),
+            datasets: [{
+              label: 'Расход за день',
+              data: entries.map(([, v]) => v),
+              backgroundColor: '#F97316'
+            }]
+          },
+          options: {
+            ...curiousBarOptions(),
+            indexAxis: 'y'
+          }
+        });
+        hint.textContent = 'Дни с наибольшими тратами за выбранный период.';
+        return;
+      }
+
+      if (curiousType === 'forecast') {
+        const untilInput = document.getElementById('curiousForecastDate');
+        const targetDate = (untilInput && untilInput.value) || endOfMonth(today());
+        const start = rangeFrom;
+        const end = rangeTo < today() ? rangeTo : today();
+        const daysPast = Math.max(1, daysBetween(start, end) + (end >= start ? 1 : 0));
+        const spent = expenses
+          .filter(tx => tx.date >= start && tx.date <= end)
+          .reduce((s, t) => s + t.amount, 0);
+        const avgPerDay = spent / daysPast;
+        const daysLeft = Math.max(0, daysBetween(end, targetDate));
+        const projectedExtra = avgPerDay * daysLeft;
+        const projectedTotal = roundMoney(spent + projectedExtra);
+
+        // build series: actual cumulative then projection
+        const datesAct = eachDate(start, end);
+        const byDay = {};
+        expenses.forEach(tx => {
+          if (tx.date >= start && tx.date <= end) byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount;
+        });
+        let run = 0;
+        const actual = datesAct.map(d => {
+          run = roundMoney(run + (byDay[d] || 0));
+          return run;
+        });
+        const datesProj = daysLeft > 0 ? eachDate(addDays(end, 1), targetDate) : [];
+        const projected = datesProj.map((_, i) => roundMoney(run + avgPerDay * (i + 1)));
+        const labels = datesAct.map(d => d.slice(5)).concat(datesProj.map(d => d.slice(5)));
+        const dataActual = actual.concat(datesProj.map(() => null));
+        const dataProj = actual.map(() => null);
+        if (actual.length) dataProj[actual.length - 1] = actual[actual.length - 1];
+        projected.forEach(v => dataProj.push(v));
+
+        if (!datesAct.length && !datesProj.length) return showCuriousEmpty(true);
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'line',
+          data: {
+            labels,
+            datasets: [
+              {
+                label: 'Факт',
+                data: dataActual,
+                borderColor: '#DC2626',
+                backgroundColor: 'rgba(220,38,38,0.08)',
+                spanGaps: false,
+                tension: 0.2,
+                pointRadius: 0
+              },
+              {
+                label: 'Прогноз',
+                data: dataProj,
+                borderColor: '#9333EA',
+                borderDash: [6, 4],
+                spanGaps: false,
+                tension: 0.2,
+                pointRadius: 0
+              }
+            ]
+          },
+          options: curiousLineOptions('Br')
+        });
+        hint.textContent =
+          `Средний расход ${formatMoney(avgPerDay)}/день за ${daysPast} дн. ` +
+          `До ${formatDate(targetDate)}: ещё ~${formatMoney(projectedExtra)}, всего за период ~${formatMoney(projectedTotal)}.`;
+        return;
+      }
+    }
+
+    function curiousLineOptions(unit) {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: ctx => `${ctx.dataset.label}: ${formatMoney(ctx.raw)}`
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } } },
+          y: {
+            ticks: {
+              font: { size: 10 },
+              callback: v => (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v)
+            }
+          }
+        }
+      };
+    }
+
+    function curiousBarOptions() {
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: ctx => {
+                const v = ctx.raw;
+                if (curiousType === 'frequency') return `${v} раз`;
+                return formatMoney(v);
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { size: 10 } } },
+          y: { ticks: { font: { size: 10 } } }
+        }
+      };
+    }
+
+    function renderCuriousHeatmap(rangeFrom, rangeTo, expenses, hintEl) {
+      destroyCuriousChart();
+      document.getElementById('curiousChartWrap').classList.add('hidden');
+      const heat = document.getElementById('curiousHeatmap');
+      heat.classList.remove('hidden');
+      document.getElementById('curiousEmpty').classList.add('hidden');
+
+      const byDay = {};
+      expenses.forEach(tx => {
+        byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount;
+      });
+      const amounts = Object.values(byDay);
+      const max = amounts.length ? Math.max(...amounts) : 0;
+
+      const start = new Date(rangeFrom + 'T12:00:00');
+      start.setDate(1);
+      const end = new Date(rangeTo + 'T12:00:00');
+      end.setMonth(end.getMonth() + 1);
+      end.setDate(0);
+
+      // limit heatmap to period months but only color days in range
+      const heads = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+      let html = heads.map(h => `<div class="heatmap-head">${h}</div>`).join('');
+
+      // start from Monday of first week
+      const d0 = new Date(start);
+      const wd = (d0.getDay() + 6) % 7; // mon=0
+      d0.setDate(d0.getDate() - wd);
+
+      const endShow = new Date(end);
+      const cells = [];
+      for (let i = 0; i < 42 * 3; i++) {
+        const iso = d0.toISOString().slice(0, 10);
+        if (d0 > endShow && (d0.getDay() + 6) % 7 === 0 && i > 7) break;
+        const inRange = iso >= rangeFrom && iso <= rangeTo;
+        const val = byDay[iso] || 0;
+        let bg = '#F1F5F9';
+        let cls = 'heatmap-cell';
+        if (inRange && val > 0 && max > 0) {
+          const t = val / max;
+          const alpha = 0.25 + t * 0.75;
+          bg = `rgba(220, 38, 38, ${alpha.toFixed(2)})`;
+          cls += ' has';
+        } else if (!inRange) {
+          bg = '#F8FAFC';
+        }
+        const dayNum = d0.getDate();
+        cells.push(`<div class="${cls}" style="background:${bg}" title="${iso}: ${formatMoney(val)}">${dayNum}</div>`);
+        d0.setDate(d0.getDate() + 1);
+        if (cells.length > 100) break;
+      }
+      heat.innerHTML = `<div class="heatmap">${html}${cells.join('')}</div>
+        <div class="heatmap-legend">
+          <span>Меньше</span>
+          <span class="box" style="background:#FECACA"></span>
+          <span class="box" style="background:#F87171"></span>
+          <span class="box" style="background:#DC2626"></span>
+          <span>Больше</span>
+        </div>`;
+      if (hintEl) hintEl.textContent = 'Интенсивность цвета — сумма трат за день. Наведите на клетку для суммы.';
+      if (!amounts.length) {
+        // still show calendar but hint
+        if (hintEl) hintEl.textContent = 'Нет расходов за период — календарь пустой.';
       }
     }
 
@@ -2680,10 +3406,18 @@
       let splitsHtml = '';
       if (splits.length > 1) {
         splitsHtml = `<div class="d-split">` + splits.map(sp =>
-          `<div class="d-row"><span>${getCategoryLabel(sp.categoryId)}</span><strong>−${formatMoney(sp.amount)}</strong></div>`
+          `<div class="d-row"><span>${getCategoryLabel(sp.categoryId)}${sp.note ? ' · ' + sp.note : ''}</span><strong>−${formatMoney(sp.amount)}</strong></div>`
         ).join('') + `</div>`;
       } else if (splits.length === 1) {
-        splitsHtml = `<div class="d-row"><span>Категория</span><strong>${getCategoryLabel(splits[0].categoryId)}</strong></div>`;
+        splitsHtml = `<div class="d-row"><span>Категория</span><strong>${getCategoryLabel(splits[0].categoryId)}${splits[0].note ? ' · ' + splits[0].note : ''}</strong></div>`;
+      }
+      let allocHtml = '';
+      if (tx.allocations && tx.allocations.length) {
+        allocHtml = `<div class="d-split">` + tx.allocations.map(a => {
+          const p = (state.planned || []).find(x => x.id === a.plannedId);
+          const title = p ? (p.note || 'План') : 'План';
+          return `<div class="d-row"><span>Погашение: ${title}</span><strong>−${formatMoney(a.amount)}</strong></div>`;
+        }).join('') + `</div>`;
       }
       const before = around ? formatMoney(around.before) : '—';
       const after = around ? formatMoney(around.after) : '—';
@@ -2693,6 +3427,7 @@
         <div class="d-row"><span>Баланс до</span><strong>${before}</strong></div>
         <div class="d-row"><span>Сумма</span><strong class="expense">−${formatMoney(tx.amount)}</strong></div>
         ${splitsHtml}
+        ${allocHtml}
         <div class="d-row"><span>Остаток после</span><strong>${after}</strong></div>
         <div class="d-row"><span>Заметка</span><strong>${tx.note ? tx.note : '—'}</strong></div>
       `;
@@ -2745,13 +3480,19 @@
       }
       empty.classList.add('hidden');
       list.innerHTML = items.map(tx => {
-        const splitsText = (tx.splits || []).map(sp => getCategoryLabel(sp.categoryId)).join(', ');
+        const splitsText = (tx.splits || []).map(sp => {
+          const n = getCategoryLabel(sp.categoryId);
+          return sp.note ? `${n} (${sp.note})` : n;
+        }).join(', ');
         const accIcon = accountEmoji(tx.account);
+        const allocNote = (tx.allocations && tx.allocations.length)
+          ? ' · план ✓'
+          : '';
         return `<div class="tx-wrap" data-tx-id="${tx.id}">
           <div class="tx-item clickable" data-expand="1">
             <div class="tx-icon expense">↓</div>
             <div class="tx-info">
-              <div class="tx-title">${splitsText}${tx.note ? ' · ' + tx.note : ''}</div>
+              <div class="tx-title">${splitsText}${tx.note ? ' · ' + tx.note : ''}${allocNote}</div>
               <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}</div>
             </div>
             <div class="tx-amount expense">−${formatMoney(tx.amount)}</div>
@@ -2919,17 +3660,19 @@
     // ========== SPLITS ==========
     let splitAutoFillLock = false;
 
-    function addSplitRow(categoryId = '', amount = '', skipAutoFill = false) {
+    function addSplitRow(categoryId = '', amount = '', skipAutoFill = false, note = '') {
       const list = document.getElementById('splitsList');
       const row = document.createElement('div');
       row.className = 'split-row';
       const amountVal = amount === '' || amount === null || amount === undefined ? '' : amount;
+      const noteVal = (note || '').replace(/"/g, '&quot;');
       row.innerHTML = `
         <select class="split-cat">
           ${buildCategoryOptions(categoryId)}
         </select>
         <input type="number" class="split-amount" placeholder="0" inputmode="decimal" min="0" step="0.01" value="${amountVal}">
         <button type="button" class="remove-btn" aria-label="Удалить">×</button>
+        <input type="text" class="split-note" placeholder="Заметка к категории" value="${noteVal}">
       `;
       list.appendChild(row);
       row.querySelector('.remove-btn').onclick = () => {
@@ -2938,9 +3681,8 @@
       };
       row.querySelector('.split-amount').addEventListener('input', e => {
         if (splitAutoFillLock) return;
-        const inputs = [...document.querySelectorAll('.split-amount')];
+        const inputs = [...document.querySelectorAll('#splitsList .split-amount')];
         const isLast = inputs.length && inputs[inputs.length - 1] === e.target;
-        // если правят не последнюю строку — пересчитать последнюю
         if (!isLast) autoFillLastSplit();
         else updateRemainingHint();
       });
@@ -3000,10 +3742,158 @@
 
     function getSplits() {
       const rows = document.querySelectorAll('#splitsList .split-row');
-      return [...rows].map(r => ({
-        categoryId: r.querySelector('.split-cat').value,
-        amount: roundMoney(r.querySelector('.split-amount').value)
-      })).filter(s => s.amount > 0);
+      return [...rows].map(r => {
+        const note = (r.querySelector('.split-note')?.value || '').trim();
+        return {
+          categoryId: r.querySelector('.split-cat').value,
+          amount: roundMoney(r.querySelector('.split-amount').value),
+          note: note || undefined
+        };
+      }).filter(s => s.amount > 0);
+    }
+
+    // ========== PLANNED EXPENSES ==========
+    function getPlannedCovered(plannedId, excludeExpenseId) {
+      let sum = 0;
+      state.transactions.forEach(tx => {
+        if (tx.type !== 'expense' || !tx.allocations) return;
+        if (excludeExpenseId && tx.id === excludeExpenseId) return;
+        tx.allocations.forEach(a => {
+          if (a.plannedId === plannedId) sum = roundMoney(sum + (a.amount || 0));
+        });
+      });
+      return sum;
+    }
+
+    function getPlannedRemaining(p, excludeExpenseId) {
+      return roundMoney((p.amount || 0) - getPlannedCovered(p.id, excludeExpenseId));
+    }
+
+    function isPlannedClosed(p) {
+      return getPlannedRemaining(p) <= 0.009;
+    }
+
+    function getOpenPlannedSum() {
+      return roundMoney((state.planned || []).reduce((s, p) => {
+        const rem = getPlannedRemaining(p);
+        return s + (rem > 0 ? rem : 0);
+      }, 0));
+    }
+
+    function getPlannedCoverLinks(plannedId) {
+      const links = [];
+      state.transactions.forEach(tx => {
+        if (tx.type !== 'expense' || !tx.allocations) return;
+        tx.allocations.forEach(a => {
+          if (a.plannedId === plannedId && a.amount > 0) {
+            links.push({ expenseId: tx.id, amount: a.amount, date: tx.date, note: tx.note });
+          }
+        });
+      });
+      return links;
+    }
+
+    function renderPlannedList() {
+      const list = document.getElementById('plannedList');
+      const empty = document.getElementById('plannedListEmpty');
+      if (!list) return;
+      const items = (state.planned || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      if (!items.length) {
+        list.innerHTML = '';
+        if (empty) empty.classList.remove('hidden');
+        return;
+      }
+      if (empty) empty.classList.add('hidden');
+      list.innerHTML = items.map(p => {
+        const rem = getPlannedRemaining(p);
+        const closed = rem <= 0.009;
+        const covered = getPlannedCovered(p.id);
+        const catLabel = (p.splits && p.splits[0])
+          ? getCategoryLabel(p.splits[0].categoryId)
+          : (p.categoryId ? getCategoryLabel(p.categoryId) : '—');
+        const links = getPlannedCoverLinks(p.id);
+        const coversHtml = links.length
+          ? `<div class="pi-covers">Погашено: ${links.map(l =>
+              `${formatDate(l.date)} (−${formatMoney(l.amount)}${l.note ? ', ' + l.note : ''})`
+            ).join('; ')}</div>`
+          : '';
+        return `<div class="planned-item ${closed ? 'closed' : ''}" data-planned-id="${p.id}">
+          <div class="pi-head">
+            <div>
+              <div class="pi-title">${p.note || catLabel}</div>
+              <div class="pi-meta">${formatDate(p.date || today())} · ${catLabel} · ${formatMoney(p.amount)}
+                ${covered > 0 ? ` · погашено ${formatMoney(covered)}` : ''}
+                ${!closed ? ` · осталось ${formatMoney(rem)}` : ''}
+              </div>
+            </div>
+            <span class="pi-badge">${closed ? '✓ закрыта' : 'открыта'}</span>
+          </div>
+          ${coversHtml}
+          <div style="margin-top:8px;display:flex;gap:6px">
+            <button type="button" class="btn btn-ghost btn-sm planned-del" data-id="${p.id}" style="flex:1">Удалить</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderExpenseAllocList(prefill) {
+      const box = document.getElementById('expenseAllocList');
+      if (!box) return;
+      const excludeId = editingExpenseId || null;
+      const open = (state.planned || []).filter(p => getPlannedRemaining(p, excludeId) > 0.009);
+      if (!open.length) {
+        box.innerHTML = '<p class="text-sm text-muted">Нет открытых предполагаемых трат</p>';
+        return;
+      }
+      const pref = prefill || {};
+      box.innerHTML = open.map(p => {
+        const rem = getPlannedRemaining(p, excludeId);
+        const title = p.note || (p.splits && p.splits[0] ? getCategoryLabel(p.splits[0].categoryId) : 'План');
+        const cur = pref[p.id] || 0;
+        const checked = cur > 0 ? 'checked' : '';
+        return `<div class="alloc-row" data-planned-id="${p.id}" data-remaining="${rem}">
+          <label class="alloc-check">
+            <input type="checkbox" class="alloc-full" ${checked}>
+            <span>${title} · осталось ${formatMoney(rem)}</span>
+          </label>
+          <input type="number" class="alloc-amount" placeholder="0" min="0" step="0.01" inputmode="decimal" value="${cur || ''}">
+          <button type="button" class="btn btn-ghost btn-sm alloc-full-btn" style="padding:6px 8px;font-size:0.75rem">Всё</button>
+        </div>`;
+      }).join('');
+
+      box.querySelectorAll('.alloc-full-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const row = btn.closest('.alloc-row');
+          const rem = parseFloat(row.dataset.remaining) || 0;
+          row.querySelector('.alloc-amount').value = String(rem);
+          row.querySelector('.alloc-full').checked = true;
+        });
+      });
+      box.querySelectorAll('.alloc-full').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const row = cb.closest('.alloc-row');
+          const rem = parseFloat(row.dataset.remaining) || 0;
+          if (cb.checked) row.querySelector('.alloc-amount').value = String(rem);
+          else row.querySelector('.alloc-amount').value = '';
+        });
+      });
+    }
+
+    function getExpenseAllocations() {
+      const rows = document.querySelectorAll('#expenseAllocList .alloc-row');
+      const out = [];
+      rows.forEach(row => {
+        const plannedId = row.dataset.plannedId;
+        const amount = roundMoney(row.querySelector('.alloc-amount')?.value);
+        if (amount > 0 && plannedId) out.push({ plannedId, amount });
+      });
+      return out;
+    }
+
+    function fillPlannedCategorySelect() {
+      const sel = document.getElementById('plannedCategory');
+      if (!sel) return;
+      sel.innerHTML = buildCategoryOptions(sel.value || '');
     }
 
     function setExpenseAccountUI(account) {
@@ -3028,6 +3918,7 @@
       document.getElementById('splitsList').innerHTML = '';
       addSplitRow();
       updateRemaining();
+      renderExpenseAllocList();
     }
 
     function startEditExpense(id) {
@@ -3046,8 +3937,12 @@
 
       document.getElementById('splitsList').innerHTML = '';
       const splits = tx.splits && tx.splits.length ? tx.splits : [{ categoryId: '', amount: tx.amount }];
-      splits.forEach(sp => addSplitRow(sp.categoryId, sp.amount, true));
+      splits.forEach(sp => addSplitRow(sp.categoryId, sp.amount, true, sp.note || ''));
       updateRemainingHint();
+
+      const pref = {};
+      (tx.allocations || []).forEach(a => { pref[a.plannedId] = a.amount; });
+      renderExpenseAllocList(pref);
 
       // Перейти на экран расходов
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -3127,6 +4022,11 @@
           if (btn.dataset.screen === 'expense') {
             renderExpenseList();
             refreshSplitCategorySelects();
+            fillPlannedCategorySelect();
+            renderPlannedList();
+            renderExpenseAllocList();
+            const pd = document.getElementById('plannedDate');
+            if (pd && !pd.value) pd.value = today();
             if (!document.querySelector('#splitsList .split-row')) addSplitRow();
           }
           if (btn.dataset.screen === 'history') renderHistory();
@@ -3147,6 +4047,14 @@
         state.statsFilterSources = [];
         renderStats();
         toast('Фильтры сброшены');
+      });
+
+      document.getElementById('curiousSelect').addEventListener('change', e => {
+        curiousType = e.target.value;
+        renderCuriousStats();
+      });
+      document.getElementById('curiousForecastDate').addEventListener('change', () => {
+        if (curiousType === 'forecast') renderCuriousStats();
       });
 
       document.getElementById('btnCollapseAll').addEventListener('click', () => {
@@ -3339,6 +4247,52 @@
       // Add split
       document.getElementById('btnAddSplit').addEventListener('click', () => addSplitRow());
 
+      document.getElementById('btnAddPlanned').addEventListener('click', () => {
+        const amount = roundMoney(document.getElementById('plannedAmount').value);
+        const date = document.getElementById('plannedDate').value || today();
+        const note = document.getElementById('plannedNote').value.trim();
+        const categoryId = document.getElementById('plannedCategory').value;
+        if (!amount || amount <= 0) return toast('Введите сумму');
+        if (!categoryId) return toast('Выберите категорию');
+        state.planned = state.planned || [];
+        state.planned.push({
+          id: uid(),
+          amount,
+          date,
+          note: note || undefined,
+          splits: [{ categoryId, amount, note: note || undefined }]
+        });
+        saveState();
+        document.getElementById('plannedAmount').value = '';
+        document.getElementById('plannedNote').value = '';
+        renderPlannedList();
+        renderExpenseAllocList();
+        renderAccountBalances();
+        toast('Предполагаемая трата добавлена');
+      });
+
+      document.addEventListener('click', e => {
+        if (e.target.classList.contains('planned-del') || e.target.closest('.planned-del')) {
+          const btn = e.target.classList.contains('planned-del') ? e.target : e.target.closest('.planned-del');
+          const id = btn.dataset.id;
+          if (confirm('Удалить предполагаемую трату?')) {
+            state.planned = (state.planned || []).filter(p => p.id !== id);
+            // убрать ссылки из расходов
+            state.transactions.forEach(tx => {
+              if (tx.allocations) {
+                tx.allocations = tx.allocations.filter(a => a.plannedId !== id);
+                if (!tx.allocations.length) delete tx.allocations;
+              }
+            });
+            saveState();
+            renderPlannedList();
+            renderExpenseAllocList();
+            renderAccountBalances();
+            toast('Удалено');
+          }
+        }
+      });
+
       // Expense add / edit
       document.getElementById('btnAddExpense').addEventListener('click', () => {
         const amount = roundMoney(document.getElementById('expenseAmount').value);
@@ -3346,6 +4300,7 @@
         const note = document.getElementById('expenseNote').value.trim();
         const splits = getSplits();
         const account = normalizeAccount(document.querySelector('input[name="expenseAccount"]:checked')?.value || 'visa');
+        const allocations = getExpenseAllocations();
 
         if (!amount || amount <= 0) return toast('Введите общую сумму');
         if (!date) return toast('Укажите дату');
@@ -3357,6 +4312,19 @@
           return toast('Сумма категорий должна равняться общей сумме');
         }
 
+        const allocSum = roundMoney(allocations.reduce((s, a) => s + a.amount, 0));
+        if (allocSum > amount + 0.05) {
+          return toast('Погашение планов не может быть больше суммы расхода');
+        }
+        for (const a of allocations) {
+          const p = (state.planned || []).find(x => x.id === a.plannedId);
+          if (!p) return toast('План не найден');
+          const rem = getPlannedRemaining(p, editingExpenseId);
+          if (a.amount > rem + 0.05) {
+            return toast(`Сумма погашения больше остатка плана «${p.note || 'план'}»`);
+          }
+        }
+
         if (editingExpenseId) {
           const tx = state.transactions.find(t => t.id === editingExpenseId);
           if (!tx) return toast('Запись не найдена');
@@ -3365,9 +4333,12 @@
           tx.account = account;
           tx.splits = splits;
           tx.note = note || undefined;
+          tx.allocations = allocations.length ? allocations : undefined;
           saveState();
           resetExpenseForm();
           renderExpenseList();
+          renderPlannedList();
+          renderExpenseAllocList();
           renderAccountBalances();
           renderHistory();
           renderStats();
@@ -3380,11 +4351,14 @@
             date,
             account,
             splits,
-            note: note || undefined
+            note: note || undefined,
+            allocations: allocations.length ? allocations : undefined
           });
           saveState();
           resetExpenseForm();
           renderExpenseList();
+          renderPlannedList();
+          renderExpenseAllocList();
           renderAccountBalances();
           renderHistory();
           toast('Расход добавлен');
@@ -3618,6 +4592,8 @@
             if (data.categories) state.categories = data.categories;
             if (data.sources) state.sources = data.sources;
             if (data.transactions) state.transactions = data.transactions;
+            if (data.planned) state.planned = data.planned;
+            else if (!state.planned) state.planned = [];
             if (data.initialBalances) state.initialBalances = data.initialBalances;
             if (data.setupComplete !== undefined) state.setupComplete = !!data.setupComplete;
             state.transactions.forEach(tx => {
@@ -3650,6 +4626,7 @@
       document.getElementById('btnClear').addEventListener('click', () => {
         if (confirm('Удалить ВСЕ данные? Это нельзя отменить.')) {
           state.transactions = [];
+          state.planned = [];
           state.categories = [...DEFAULT_CATEGORIES];
           state.sources = [...DEFAULT_SOURCES];
           state.initialBalances = { visa: 0, mastercard: 0, cash: 0 };
@@ -3665,6 +4642,8 @@
     function renderAll() {
       renderStats();
       renderAccountBalances();
+      renderPlannedList();
+      renderExpenseAllocList();
       renderIncomeList();
       renderExpenseList();
       renderHistory();
