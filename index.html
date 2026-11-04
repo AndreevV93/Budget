@@ -1724,6 +1724,10 @@
             <option value="net">Чистый поток по месяцам</option>
             <option value="burn">Скорость трат (14 дней)</option>
             <option value="autopayshare">Доля автооплат в расходах</option>
+            <option value="runway">Запас дней до конца месяца</option>
+            <option value="payday">Эффект после крупного дохода</option>
+            <option value="goal">Цель накопления</option>
+            <option value="weekend">Выходные vs будни</option>
           </select>
         </div>
         <div class="form-row">
@@ -1744,6 +1748,11 @@
         <div class="form-group hidden" id="curiousCompareWrap">
           <label>Категории для сравнения (2+)</label>
           <div class="filter-chips" id="curiousCompareChips"></div>
+        </div>
+        <div class="form-group hidden" id="curiousGoalWrap">
+          <label>Цель накопления (Br)</label>
+          <input type="number" id="curiousGoalAmount" placeholder="Например: 1000" inputmode="decimal" min="0" step="0.01">
+          <p class="text-sm text-muted" style="margin-top:6px">Прогресс = сумма на всех счетах сейчас</p>
         </div>
         <div class="chart-container tall" id="curiousChartWrap">
           <canvas id="curiousChart"></canvas>
@@ -1813,6 +1822,7 @@
       <button type="button" class="sub-tab active" data-exp-tab="new">Новый</button>
       <button type="button" class="sub-tab" data-exp-tab="list">Список</button>
       <button type="button" class="sub-tab" data-exp-tab="planned">Планы</button>
+      <button type="button" class="sub-tab" data-exp-tab="debts">Долги</button>
       <button type="button" class="sub-tab" data-exp-tab="auto">Авто</button>
     </div>
     <div class="expense-panel active" id="expPanel-new">
@@ -1864,6 +1874,50 @@
     </div>
 
         </div>
+
+
+    <div class="expense-panel" id="expPanel-debts">
+      <div class="card">
+        <div class="card-title">Долги <button type="button" class="help-tip" data-help="debts">?</button></div>
+        <p class="text-sm text-muted mb-2">Вы дали деньги в долг: сумма списывается со счёта. При возврате — зачисляется обратно. Можно закрыть полностью даже при другой сумме.</p>
+        <div class="form-group">
+          <label>Откуда списать (выдали)</label>
+          <div class="account-toggle" id="debtAccountToggle" style="flex-wrap:wrap">
+            <label class="account-option active" data-account="visa">
+              <input type="radio" name="debtAccount" value="visa" checked>
+              <span class="opt-icon"><span class="brand-visa" style="font-size:0.55rem;padding:2px 5px">VISA</span></span>
+            </label>
+            <label class="account-option" data-account="mastercard">
+              <input type="radio" name="debtAccount" value="mastercard">
+              <span class="opt-icon"><span class="brand-mc" style="width:28px;height:16px"><span class="mc-r" style="width:12px;height:12px"></span><span class="mc-y" style="width:12px;height:12px"></span></span></span>
+            </label>
+            <label class="account-option" data-account="cash">
+              <input type="radio" name="debtAccount" value="cash">
+              <span class="opt-icon">💵</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Сумма долга (Br)</label>
+          <input type="number" id="debtAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+        </div>
+        <div class="form-group">
+          <label>📅 Дата выдачи</label>
+          <input type="date" id="debtDate">
+        </div>
+        <div class="form-group">
+          <label>Заметка (кто должник)</label>
+          <input type="text" id="debtNote" placeholder="Например: Настя, мама">
+        </div>
+        <div class="form-group">
+          <label>Ориентировочная дата возврата</label>
+          <input type="date" id="debtReturnDate">
+        </div>
+        <button class="btn btn-secondary" id="btnAddDebt" style="width:100%">Добавить долг</button>
+        <div class="mt-2" id="debtList"></div>
+        <div class="empty-state hidden" id="debtListEmpty">Нет долгов</div>
+      </div>
+    </div>
 
     <div class="expense-panel" id="expPanel-auto">
 <div class="card">
@@ -2173,23 +2227,77 @@
         <label class="pdf-opt"><input type="checkbox" id="pdfTx"><span>Список операций</span></label>
       </div>
 
-      <div class="filter-section-title">Графики (можно несколько)</div>
+      <div class="filter-section-title">Графики и блоки статистики (как в приложении)</div>
       <div class="pdf-opts">
         <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="expBars" checked><span>Расходы по категориям</span></label>
         <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="incBars" checked><span>Доходы по источникам</span></label>
-        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="months"><span>Доходы vs расходы по месяцам</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="accounts" checked><span>Структура остатков</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="months" checked><span>Доходы vs расходы по месяцам</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="balance"><span>Динамика баланса</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="top"><span>Топ категорий</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="frequency"><span>Частота трат по категориям</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="avgcheck"><span>Средний чек по категориям</span></label>
         <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="weekday"><span>Средний расход по дням недели</span></label>
-        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="top"><span>Топ‑10 категорий</span></label>
-        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="accounts"><span>Структура остатков</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="weekend"><span>Выходные vs будни</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="cumulative"><span>Накопительные траты</span></label>
         <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="records"><span>Рекордные дни</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="heatmap"><span>Календарь трат (таблица)</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="forecast"><span>Прогноз расходов</span></label>
         <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="autopay"><span>Автооплаты: успех / ошибки</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="autopayshare"><span>Доля автооплат</span></label>
         <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="savings"><span>Норма сбережений</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="net"><span>Чистый поток по месяцам</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="burn"><span>Скорость трат (14 дней)</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="runway"><span>Запас дней до конца месяца</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="payday"><span>Эффект после крупного дохода</span></label>
+        <label class="pdf-opt"><input type="checkbox" class="pdf-chart" value="goal"><span>Цель накопления</span></label>
       </div>
       <div style="display:flex;gap:8px;margin-top:8px">
         <button type="button" class="btn btn-ghost btn-sm" id="pdfSelectAll" style="flex:1">Выбрать всё</button>
         <button type="button" class="btn btn-ghost btn-sm" id="pdfSelectNone" style="flex:1">Снять всё</button>
       </div>
       <button class="btn btn-primary" id="btnPdfGo" style="margin-top:14px">Сформировать отчёт</button>
+    </div>
+  </div>
+
+  
+  <div class="modal-overlay" id="debtRepayModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Закрыть задолженность</h3>
+        <button class="modal-close" id="debtRepayClose">×</button>
+      </div>
+      <p class="text-sm text-muted mb-2" id="debtRepayInfo"></p>
+      <div class="form-group">
+        <label>Сумма возврата (Br)</label>
+        <input type="number" id="debtRepayAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Куда пришли деньги</label>
+        <div class="account-toggle" id="debtRepayAccountToggle" style="flex-wrap:wrap">
+          <label class="account-option active" data-account="visa">
+            <input type="radio" name="debtRepayAccount" value="visa" checked>
+            <span class="opt-icon"><span class="brand-visa" style="font-size:0.55rem;padding:2px 5px">VISA</span></span>
+          </label>
+          <label class="account-option" data-account="mastercard">
+            <input type="radio" name="debtRepayAccount" value="mastercard">
+            <span class="opt-icon"><span class="brand-mc" style="width:28px;height:16px"><span class="mc-r" style="width:12px;height:12px"></span><span class="mc-y" style="width:12px;height:12px"></span></span></span>
+          </label>
+          <label class="account-option" data-account="cash">
+            <input type="radio" name="debtRepayAccount" value="cash">
+            <span class="opt-icon">💵</span>
+          </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>📅 Дата возврата</label>
+        <input type="date" id="debtRepayDate">
+      </div>
+      <label class="alloc-check" style="display:flex;align-items:center;gap:8px;margin:10px 0;cursor:pointer">
+        <input type="checkbox" id="debtRepayFull">
+        <span>Долговых обязательств больше нет (полное закрытие, даже если сумма другая)</span>
+      </label>
+      <button class="btn btn-primary" id="btnDebtRepaySave" style="width:100%">Сохранить</button>
     </div>
   </div>
 
@@ -2300,6 +2408,7 @@
       transactions: [],
       planned: [],
       autopay: [],
+      debts: [],
       plannedUntilDate: null,
       initialBalances: { visa: 0, mastercard: 0, cash: 0 },
       setupComplete: false,
@@ -2746,6 +2855,7 @@
           state.transactions = data.transactions || [];
           state.planned = data.planned || [];
           state.autopay = data.autopay || [];
+          state.debts = data.debts || [];
           state.plannedUntilDate = data.plannedUntilDate || null;
           state.initialBalances = data.initialBalances || { visa: 0, mastercard: 0, cash: 0 };
           // migrate old card → visa
@@ -2788,6 +2898,7 @@
         state.transactions = [];
         state.planned = [];
         state.autopay = [];
+        state.debts = [];
         state.plannedUntilDate = null;
         state.initialBalances = { visa: 0, mastercard: 0, cash: 0 };
         state.setupComplete = false;
@@ -2808,6 +2919,7 @@
         transactions: state.transactions,
         planned: state.planned,
         autopay: state.autopay || [],
+        debts: state.debts || [],
         plannedUntilDate: state.plannedUntilDate || null,
         initialBalances: state.initialBalances,
         setupComplete: state.setupComplete
@@ -2833,6 +2945,7 @@
         transactions: state.transactions,
         planned: state.planned,
         autopay: state.autopay || [],
+        debts: state.debts || [],
         plannedUntilDate: state.plannedUntilDate || null,
         initialBalances: state.initialBalances,
         setupComplete: state.setupComplete,
@@ -2905,6 +3018,7 @@
         if (data.transactions) state.transactions = data.transactions;
         if (data.planned) state.planned = data.planned;
         if (data.autopay) state.autopay = data.autopay;
+        if (data.debts) state.debts = data.debts;
         if (data.plannedUntilDate !== undefined) state.plannedUntilDate = data.plannedUntilDate || null;
         if (data.initialBalances) state.initialBalances = data.initialBalances;
         if (data.setupComplete !== undefined) state.setupComplete = !!data.setupComplete;
@@ -3098,6 +3212,15 @@
           if (tx.autopayStatus === 'error') return; // неуспешная автооплата не списывает
           if (bal[acc] != null) bal[acc] = roundMoney(bal[acc] - amount);
         }
+      });
+      // долги: выдача − со счёта, возвраты + на счёт
+      (state.debts || []).forEach(d => {
+        const from = normalizeAccount(d.account);
+        if (bal[from] != null) bal[from] = roundMoney(bal[from] - (d.amount || 0));
+        (d.repayments || []).forEach(r => {
+          const to = normalizeAccount(r.account);
+          if (bal[to] != null) bal[to] = roundMoney(bal[to] + (r.amount || 0));
+        });
       });
       return bal;
     }
@@ -3443,6 +3566,19 @@
       if (compareWrap) {
         compareWrap.classList.toggle('hidden', curiousType !== 'compare');
         if (curiousType === 'compare') renderCuriousCompareChips();
+      }
+      const goalWrap = document.getElementById('curiousGoalWrap');
+      if (goalWrap) {
+        goalWrap.classList.toggle('hidden', curiousType !== 'goal');
+        if (curiousType === 'goal') {
+          const g = document.getElementById('curiousGoalAmount');
+          if (g && !g.value) {
+            try {
+              const saved = localStorage.getItem('budget_savings_goal');
+              if (saved) g.value = saved;
+            } catch (e) {}
+          }
+        }
       }
 
       const { from: rangeFrom, to: rangeTo } = getCuriousDateRange();
@@ -3965,6 +4101,227 @@
         hint.textContent = `Последние 14 дней до ${formatDate(end)}. Средняя скорость: ${formatMoney(avg)}/день.`;
         return;
       }
+
+      if (curiousType === 'runway') {
+        const bal = getAccountBalances();
+        const total = roundMoney(bal.visa + bal.mastercard + bal.cash);
+        const end = today();
+        const start = addDays(end, -13);
+        const monthEnd = endOfMonth(end);
+        const daysLeft = Math.max(0, daysBetween(end, monthEnd));
+        let spent14 = 0;
+        let daysWithSpend = 0;
+        const byDay = {};
+        state.transactions.filter(t => t.type === 'expense' && t.autopayStatus !== 'error').forEach(tx => {
+          if (tx.date >= start && tx.date <= end) {
+            byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount;
+          }
+        });
+        eachDate(start, end).forEach(d => {
+          const v = byDay[d] || 0;
+          spent14 += v;
+          if (v > 0) daysWithSpend += 1;
+        });
+        const burn = roundMoney(spent14 / 14);
+        const daysCovered = burn > 0.009 ? Math.floor(total / burn) : 999;
+        const need = roundMoney(burn * daysLeft);
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'bar',
+          data: {
+            labels: ['Хватит (дней)', 'До конца месяца', 'Burn Br/день'],
+            datasets: [{
+              label: 'Запас',
+              data: [Math.min(daysCovered, 90), daysLeft, burn],
+              backgroundColor: [
+                daysCovered >= daysLeft ? '#16A34A' : '#DC2626',
+                '#0EA5E9',
+                '#D97706'
+              ]
+            }]
+          },
+          options: {
+            ...curiousBarOptions(),
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: ctx => {
+                    if (ctx.dataIndex === 2) return 'Burn: ' + formatMoney(ctx.raw) + '/день';
+                    return ctx.label + ': ' + ctx.raw;
+                  }
+                }
+              }
+            }
+          }
+        });
+        const ok = daysCovered >= daysLeft;
+        hint.textContent =
+          `Сейчас на счетах ${formatMoney(total)}. Burn ~${formatMoney(burn)}/день (14 дн.). ` +
+          `Хватит ~${daysCovered > 90 ? '90+' : daysCovered} дн. До конца месяца ${daysLeft} дн. ` +
+          (ok
+            ? `Запаса достаточно (нужно ~${formatMoney(need)}).`
+            : `Не хватает: нужно ~${formatMoney(need)}, дефицит ~${formatMoney(Math.max(0, need - total))}.`);
+        return;
+      }
+
+      if (curiousType === 'payday') {
+        const allInc = state.transactions.filter(t => t.type === 'income').sort((a, b) => b.amount - a.amount);
+        if (allInc.length < 1) return showCuriousEmpty(true);
+        const avgInc = allInc.reduce((s, t) => s + t.amount, 0) / allInc.length;
+        const threshold = Math.max(avgInc * 1.25, avgInc + 1);
+        const big = allInc.filter(t => t.amount >= threshold).slice(0, 8);
+        if (!big.length) {
+          showCuriousEmpty(true);
+          document.getElementById('curiousEmpty').textContent = 'Нет крупных доходов для анализа';
+          hint.textContent = 'Крупный доход = больше среднего × 1.25.';
+          return;
+        }
+        const labels = [];
+        const windowSpend = [];
+        const baseline = [];
+        // baseline: average 7-day spend across period
+        let all7 = [];
+        const expAll = state.transactions.filter(t => t.type === 'expense' && t.autopayStatus !== 'error');
+        big.forEach(inc => {
+          const from = inc.date;
+          const to = addDays(from, 6);
+          let sum = 0;
+          expAll.forEach(tx => {
+            if (tx.date >= from && tx.date <= to) sum += tx.amount;
+          });
+          labels.push(formatDate(inc.date) + ' +' + formatMoney(inc.amount));
+          windowSpend.push(roundMoney(sum));
+        });
+        // baseline: median of random-ish week spends from last 90 days
+        const refEnd = today();
+        const refStart = addDays(refEnd, -89);
+        const weekSums = [];
+        for (let i = 0; i < 12; i++) {
+          const a = addDays(refStart, i * 7);
+          const b = addDays(a, 6);
+          if (b > refEnd) break;
+          let s = 0;
+          expAll.forEach(tx => {
+            if (tx.date >= a && tx.date <= b) s += tx.amount;
+          });
+          weekSums.push(s);
+        }
+        const base = weekSums.length
+          ? roundMoney(weekSums.reduce((a, b) => a + b, 0) / weekSums.length)
+          : 0;
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Траты за 7 дней после', data: windowSpend, backgroundColor: '#DC2626' },
+              { label: 'Обычная неделя (ср.)', data: labels.map(() => base), backgroundColor: '#94A3B8' }
+            ]
+          },
+          options: {
+            ...curiousBarOptions(),
+            scales: {
+              x: { ticks: { maxRotation: 45, minRotation: 0, font: { size: 9 }, autoSkip: true, maxTicksLimit: 8 } },
+              y: { ticks: { font: { size: 10 }, callback: v => (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v) } }
+            }
+          }
+        });
+        const avgAfter = windowSpend.length
+          ? roundMoney(windowSpend.reduce((a, b) => a + b, 0) / windowSpend.length)
+          : 0;
+        hint.textContent =
+          `После крупного дохода за 7 дней в среднем ${formatMoney(avgAfter)} vs обычная неделя ${formatMoney(base)}. ` +
+          (avgAfter > base * 1.1 ? 'Траты после дохода выше обычного.' : 'Сильного всплеска нет.');
+        return;
+      }
+
+      if (curiousType === 'goal') {
+        const input = document.getElementById('curiousGoalAmount');
+        let goal = roundMoney(input && input.value);
+        if (goal > 0) {
+          try { localStorage.setItem('budget_savings_goal', String(goal)); } catch (e) {}
+        } else {
+          try {
+            goal = roundMoney(localStorage.getItem('budget_savings_goal') || 0);
+            if (input && goal && !input.value) input.value = goal;
+          } catch (e) {}
+        }
+        if (!goal || goal <= 0) {
+          showCuriousEmpty(true);
+          document.getElementById('curiousEmpty').textContent = 'Укажите сумму цели накопления';
+          hint.textContent = 'Введите цель выше — прогресс считается по сумме на всех счетах.';
+          return;
+        }
+        const bal = getAccountBalances();
+        const now = roundMoney(bal.visa + bal.mastercard + bal.cash);
+        const pct = Math.min(100, roundMoney((now / goal) * 100));
+        const left = roundMoney(Math.max(0, goal - now));
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'doughnut',
+          data: {
+            labels: ['Накоплено', 'Осталось'],
+            datasets: [{
+              data: [Math.min(now, goal), Math.max(0, goal - now)],
+              backgroundColor: ['#16A34A', '#E7E5E4']
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+              tooltip: {
+                callbacks: {
+                  label: ctx => `${ctx.label}: ${formatMoney(ctx.raw)}`
+                }
+              }
+            }
+          }
+        });
+        hint.textContent =
+          `Цель ${formatMoney(goal)}. Сейчас ${formatMoney(now)} (${pct}%). ` +
+          (left > 0 ? `До цели ${formatMoney(left)}.` : 'Цель достигнута или превышена!');
+        return;
+      }
+
+      if (curiousType === 'weekend') {
+        let wdSum = 0, wdCnt = 0, weSum = 0, weCnt = 0;
+        expenses.forEach(tx => {
+          if (tx.autopayStatus === 'error') return;
+          const day = new Date(tx.date + 'T12:00:00').getDay();
+          const isWe = day === 0 || day === 6;
+          if (isWe) { weSum += tx.amount; weCnt += 1; }
+          else { wdSum += tx.amount; wdCnt += 1; }
+        });
+        if (!wdCnt && !weCnt) return showCuriousEmpty(true);
+        const wdAvg = wdCnt ? roundMoney(wdSum / wdCnt) : 0;
+        const weAvg = weCnt ? roundMoney(weSum / weCnt) : 0;
+        showCuriousEmpty(false);
+        renderCuriousCanvas({
+          type: 'bar',
+          data: {
+            labels: ['Будни (ср. чек)', 'Выходные (ср. чек)', 'Будни (сумма)', 'Выходные (сумма)'],
+            datasets: [{
+              label: 'Br',
+              data: [wdAvg, weAvg, roundMoney(wdSum), roundMoney(weSum)],
+              backgroundColor: ['#0EA5E9', '#D97706', '#38BDF8', '#FBBF24']
+            }]
+          },
+          options: curiousBarOptions()
+        });
+        hint.textContent =
+          `Чеков: будни ${wdCnt}, выходные ${weCnt}. ` +
+          `Средний чек: будни ${formatMoney(wdAvg)}, выходные ${formatMoney(weAvg)}. ` +
+          (weAvg > wdAvg * 1.15
+            ? 'В выходные чек заметно выше.'
+            : weAvg < wdAvg * 0.85
+              ? 'В выходные тратите меньше на чек.'
+              : 'Разница среднего чека небольшая.');
+        return;
+      }
     }
 
     function curiousLineOptions(unit) {
@@ -4460,6 +4817,7 @@
       });
       if (name === 'list') renderExpenseList();
       if (name === 'planned') renderPlannedList();
+      if (name === 'debts') renderDebtList();
       if (name === 'auto') { fillAutopayCategorySelect(); renderAutopayList(); }
       if (name === 'new') {
         refreshSplitCategorySelects();
@@ -4487,7 +4845,8 @@
       const map = {
         autopay: 'Автооплата сама создаёт расход в нужный день с выбранного счёта.\n\nЕсли денег мало — в истории будет ошибка, баланс не тронется.\nПотом можно нажать ✓ и погасить вручную.',
         planned: 'Предполагаемые траты не списывают деньги.\nОни показывают, сколько останется после будущих трат.\n\nБлижайшие автооплаты (до 15 дней) появляются здесь сами.\nБез даты — тоже видны.',
-        alloc: 'Можно погасить план частью расхода.\n\nГалочка «полное погашение» закрывает план даже если суммы не совпадают.'
+        alloc: 'Можно погасить план частью расхода.\n\nГалочка «полное погашение» закрывает план даже если суммы не совпадают.',
+        debts: 'Долг — вы отдали деньги со счёта.\n\n«Закрыть задолженность»: укажите сумму возврата и счёт, куда пришли деньги.\nЧастичный возврат уменьшает остаток долга.\nГалочка «обязательств больше нет» закрывает долг полностью, даже если сумма другая.'
       };
       const text = map[kind] || 'Справка';
       // многострочный toast: \n → переносы
@@ -4841,6 +5200,95 @@
           note: note || undefined
         };
       }).filter(s => s.amount > 0);
+    }
+
+
+    // ========== DEBTS ==========
+    let repayDebtId = null;
+
+    function getDebtRepaid(d) {
+      return roundMoney((d.repayments || []).reduce((s, r) => s + (Number(r.amount) || 0), 0));
+    }
+
+    function isDebtClosed(d) {
+      if (d.closed) return true;
+      if ((d.repayments || []).some(r => r.full)) return true;
+      return getDebtRepaid(d) >= (d.amount || 0) - 0.009;
+    }
+
+    function getDebtRemaining(d) {
+      if (isDebtClosed(d)) return 0;
+      return Math.max(0, roundMoney((d.amount || 0) - getDebtRepaid(d)));
+    }
+
+    function renderDebtList() {
+      const list = document.getElementById('debtList');
+      const empty = document.getElementById('debtListEmpty');
+      if (!list) return;
+      const items = (state.debts || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      if (!items.length) {
+        list.innerHTML = '';
+        if (empty) empty.classList.remove('hidden');
+        return;
+      }
+      if (empty) empty.classList.add('hidden');
+      list.innerHTML = items.map(d => {
+        const closed = isDebtClosed(d);
+        const paid = getDebtRepaid(d);
+        const rem = getDebtRemaining(d);
+        const reps = (d.repayments || []).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        const repsHtml = reps.length
+          ? `<div class="pi-covers"><strong>Погашения:</strong><br>${reps.map(r =>
+              `${formatDate(r.date)}: +${formatMoney(r.amount)} → ${accountLabel(r.account)}${r.full ? ' · полное закрытие' : ' · частично'}`
+            ).join('<br>')}</div>`
+          : '';
+        return `<div class="planned-item ${closed ? 'closed' : ''}" data-debt-id="${d.id}">
+          <div class="pi-head">
+            <div>
+              <div class="pi-title">${d.note || 'Долг'}</div>
+              <div class="pi-meta">Выдано ${formatDate(d.date)} · ${accountLabel(d.account)}
+                ${d.returnDate ? ' · ждать до ' + formatDate(d.returnDate) : ''}
+              </div>
+              <div class="pi-meta" style="margin-top:4px">
+                Было: <strong>${formatMoney(d.amount)}</strong><br>
+                Вернули: <strong>${formatMoney(paid)}</strong>
+                ${!closed ? `<br>Осталось: <strong>${formatMoney(rem)}</strong>` : ''}
+              </div>
+            </div>
+            <span class="pi-badge">${closed ? '✓ закрыт' : 'открыт'}</span>
+          </div>
+          ${repsHtml}
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+            ${!closed ? `<button type="button" class="btn btn-secondary btn-sm debt-repay" data-id="${d.id}" style="flex:1">Закрыть задолженность</button>` : ''}
+            <button type="button" class="btn btn-ghost btn-sm debt-del" data-id="${d.id}" style="flex:1">Удалить</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function openDebtRepay(id) {
+      const d = (state.debts || []).find(x => x.id === id);
+      if (!d || isDebtClosed(d)) return toast('Долг не найден или уже закрыт');
+      repayDebtId = id;
+      const rem = getDebtRemaining(d);
+      document.getElementById('debtRepayInfo').textContent =
+        `${d.note || 'Долг'}: осталось ${formatMoney(rem)} из ${formatMoney(d.amount)}`;
+      document.getElementById('debtRepayAmount').value = rem || '';
+      document.getElementById('debtRepayDate').value = today();
+      document.getElementById('debtRepayFull').checked = false;
+      const visa = document.querySelector('input[name="debtRepayAccount"][value="visa"]');
+      if (visa) {
+        visa.checked = true;
+        document.querySelectorAll('#debtRepayAccountToggle .account-option').forEach(o => {
+          o.classList.toggle('active', o.dataset.account === 'visa');
+        });
+      }
+      document.getElementById('debtRepayModal').classList.add('show');
+    }
+
+    function closeDebtRepayModal() {
+      repayDebtId = null;
+      document.getElementById('debtRepayModal')?.classList.remove('show');
     }
 
     // ========== AUTOPAY ==========
@@ -5496,6 +5944,12 @@
       });
       document.getElementById('curiousDateFrom').addEventListener('change', () => renderCuriousStats());
       document.getElementById('curiousDateTo').addEventListener('change', () => renderCuriousStats());
+      document.getElementById('curiousGoalAmount')?.addEventListener('change', () => {
+        if (curiousType === 'goal') renderCuriousStats();
+      });
+      document.getElementById('curiousGoalAmount')?.addEventListener('input', () => {
+        if (curiousType === 'goal') renderCuriousStats();
+      });
       document.getElementById('btnCuriousUseMainPeriod').addEventListener('click', () => {
         const { from, to } = getDateRange();
         document.getElementById('curiousDateFrom').value = from || '';
@@ -5768,6 +6222,89 @@
       if (document.getElementById('autopayStart') && !document.getElementById('autopayStart').value) {
         document.getElementById('autopayStart').value = today();
       }
+      // Debts
+      if (document.getElementById('debtDate') && !document.getElementById('debtDate').value) {
+        document.getElementById('debtDate').value = today();
+      }
+      document.getElementById('btnAddDebt')?.addEventListener('click', () => {
+        const amount = roundMoney(document.getElementById('debtAmount').value);
+        const account = normalizeAccount(document.querySelector('input[name="debtAccount"]:checked')?.value || 'visa');
+        const date = document.getElementById('debtDate').value;
+        const note = document.getElementById('debtNote').value.trim();
+        const returnDate = document.getElementById('debtReturnDate').value || undefined;
+        if (!amount || amount <= 0) return toast('Введите сумму');
+        if (!date) return toast('Укажите дату выдачи');
+        if (!note) return toast('Укажите, кто должник (заметка)');
+        state.debts = state.debts || [];
+        state.debts.push({
+          id: uid(),
+          amount,
+          account,
+          date,
+          note,
+          returnDate,
+          repayments: []
+        });
+        saveState();
+        document.getElementById('debtAmount').value = '';
+        document.getElementById('debtNote').value = '';
+        document.getElementById('debtReturnDate').value = '';
+        document.getElementById('debtDate').value = today();
+        renderDebtList();
+        renderAccountBalances();
+        toast('Долг добавлен, сумма списана со счёта');
+      });
+      document.getElementById('debtRepayClose')?.addEventListener('click', closeDebtRepayModal);
+      document.getElementById('debtRepayModal')?.addEventListener('click', e => {
+        if (e.target.id === 'debtRepayModal') closeDebtRepayModal();
+      });
+      document.getElementById('btnDebtRepaySave')?.addEventListener('click', () => {
+        const d = (state.debts || []).find(x => x.id === repayDebtId);
+        if (!d) return toast('Долг не найден');
+        const amount = roundMoney(document.getElementById('debtRepayAmount').value);
+        const account = normalizeAccount(document.querySelector('input[name="debtRepayAccount"]:checked')?.value || 'visa');
+        const date = document.getElementById('debtRepayDate').value;
+        const full = !!document.getElementById('debtRepayFull')?.checked;
+        if (!amount || amount <= 0) return toast('Введите сумму возврата');
+        if (!date) return toast('Укажите дату возврата');
+        const rem = getDebtRemaining(d);
+        if (!full && amount > rem + 0.05) {
+          return toast('Сумма больше остатка долга. Поставьте галочку полного закрытия или уменьшите сумму');
+        }
+        d.repayments = d.repayments || [];
+        d.repayments.push({
+          id: uid(),
+          amount,
+          account,
+          date,
+          full: full || undefined
+        });
+        if (full || getDebtRemaining(d) <= 0.009) {
+          d.closed = true;
+        }
+        saveState();
+        closeDebtRepayModal();
+        renderDebtList();
+        renderAccountBalances();
+        toast(full || isDebtClosed(d) ? 'Долг закрыт' : 'Частичное погашение записано');
+      });
+      document.addEventListener('click', e => {
+        if (e.target.closest('.debt-repay')) {
+          openDebtRepay(e.target.closest('.debt-repay').dataset.id);
+          return;
+        }
+        if (e.target.closest('.debt-del')) {
+          const id = e.target.closest('.debt-del').dataset.id;
+          if (confirm('Удалить долг и все его погашения? Баланс пересчитается.')) {
+            state.debts = (state.debts || []).filter(x => x.id !== id);
+            saveState();
+            renderDebtList();
+            renderAccountBalances();
+            toast('Долг удалён');
+          }
+        }
+      });
+
       document.getElementById('btnCancelAutopayEdit').addEventListener('click', () => {
         resetAutopayForm();
         toast('Редактирование отменено');
@@ -6189,6 +6726,7 @@
           transactions: state.transactions,
           planned: state.planned || [],
           autopay: state.autopay || [],
+          debts: state.debts || [],
           plannedUntilDate: state.plannedUntilDate || null,
           initialBalances: state.initialBalances,
           setupComplete: state.setupComplete,
@@ -6221,6 +6759,8 @@
             else if (!state.planned) state.planned = [];
             if (data.autopay) state.autopay = data.autopay;
             else if (!state.autopay) state.autopay = [];
+            if (data.debts) state.debts = data.debts;
+            else if (!state.debts) state.debts = [];
             if (data.plannedUntilDate !== undefined) state.plannedUntilDate = data.plannedUntilDate || null;
             if (data.initialBalances) state.initialBalances = data.initialBalances;
             if (data.setupComplete !== undefined) state.setupComplete = !!data.setupComplete;
@@ -6255,6 +6795,8 @@
         if (confirm('Удалить ВСЕ данные? Это нельзя отменить.')) {
           state.transactions = [];
           state.planned = [];
+          state.autopay = [];
+          state.debts = [];
           state.categories = [...DEFAULT_CATEGORIES];
           state.sources = [...DEFAULT_SOURCES];
           state.initialBalances = { visa: 0, mastercard: 0, cash: 0 };
@@ -6312,11 +6854,14 @@
       const bal = getAccountBalances();
       const total = roundMoney(bal.visa + bal.mastercard + bal.cash);
       const sumInc = incomes.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-      const sumExp = expenses.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+      const sumExp = expenses
+        .filter(t => t.autopayStatus !== 'error')
+        .reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
-      // category aggregation (include amount without splits)
+      // category aggregation (include amount without splits; skip failed autopay)
       const expByCat = {};
       expenses.forEach(t => {
+        if (t.autopayStatus === 'error') return;
         const splits = t.splits && t.splits.length ? t.splits : [{ categoryId: '_none', amount: t.amount }];
         splits.forEach(sp => {
           const r = sp.categoryId === '_none' ? '_none' : getRootCategoryId(sp.categoryId);
@@ -6585,7 +7130,10 @@
       }
       if (charts.includes('records')) {
         const byDay = {};
-        expenses.forEach(tx => { byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount; });
+        expenses.forEach(tx => {
+          if (tx.autopayStatus === 'error') return;
+          byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount;
+        });
         const items = Object.entries(byDay).sort((a,b)=>b[1]-a[1]).slice(0,10)
           .map(([d,v]) => ({ label: formatDate(d), value: roundMoney(v), color: '#F97316' }));
         html += pdfBarBlock('График: рекордные дни', items);
@@ -6599,7 +7147,7 @@
           { label: 'Ошибки', value: roundMoney(err), color: '#DC2626' }
         ]);
       }
-      if (charts.includes('savings')) {
+      if (charts.includes('savings') || charts.includes('net')) {
         const map = {};
         incomes.forEach(t => {
           const k = t.date.slice(0, 7);
@@ -6613,18 +7161,247 @@
           map[k].exp += t.amount;
         });
         const keys = Object.keys(map).sort();
-        html += `<div class="section"><h2>График: норма сбережений</h2>`;
+        if (charts.includes('savings')) {
+          html += `<div class="section"><h2>Норма сбережений по месяцам</h2>`;
+          if (!keys.length) html += `<p class="empty">Нет данных</p>`;
+          else {
+            html += `<table><tr><th>Месяц</th><th class="r">Доходы</th><th class="r">Расходы</th><th class="r">Сбережения %</th></tr>`;
+            keys.forEach(k => {
+              const pct = map[k].inc > 0 ? roundMoney(((map[k].inc - map[k].exp) / map[k].inc) * 100) : 0;
+              html += `<tr><td>${k}</td><td class="r">${formatMoney(map[k].inc)}</td>
+                <td class="r">${formatMoney(map[k].exp)}</td><td class="r">${pct}%</td></tr>`;
+            });
+            html += `</table>`;
+          }
+          html += `</div>`;
+        }
+        if (charts.includes('net')) {
+          html += `<div class="section"><h2>Чистый поток по месяцам</h2>`;
+          if (!keys.length) html += `<p class="empty">Нет данных</p>`;
+          else {
+            html += `<table><tr><th>Месяц</th><th class="r">Доходы</th><th class="r">Расходы</th><th class="r">Чистый поток</th></tr>`;
+            keys.forEach(k => {
+              html += `<tr><td>${k}</td><td class="r">${formatMoney(map[k].inc)}</td>
+                <td class="r">${formatMoney(map[k].exp)}</td><td class="r">${formatMoney(map[k].inc - map[k].exp)}</td></tr>`;
+            });
+            html += `</table>`;
+          }
+          html += `</div>`;
+        }
+      }
+      if (charts.includes('frequency') || charts.includes('avgcheck')) {
+        const map = {};
+        expenses.forEach(t => {
+          if (t.autopayStatus === 'error') return;
+          const splits = t.splits && t.splits.length ? t.splits : [{ categoryId: '_none', amount: t.amount }];
+          splits.forEach(sp => {
+            const r = sp.categoryId === '_none' ? '_none' : getRootCategoryId(sp.categoryId);
+            if (!map[r]) map[r] = { sum: 0, cnt: 0 };
+            map[r].sum += Number(sp.amount) || 0;
+            map[r].cnt += 1;
+          });
+        });
+        const entries = Object.entries(map).map(([id, v]) => {
+          const c = id === '_none' ? null : getCategory(id);
+          return {
+            label: c ? c.name : 'Без категории',
+            cnt: v.cnt,
+            avg: v.cnt ? roundMoney(v.sum / v.cnt) : 0,
+            color: c ? c.color : '#94A3B8'
+          };
+        });
+        if (charts.includes('frequency')) {
+          html += pdfBarBlock('Частота трат по категориям', entries.sort((a,b)=>b.cnt-a.cnt).slice(0,12).map(e => ({
+            label: e.label, value: e.cnt, color: e.color
+          })));
+        }
+        if (charts.includes('avgcheck')) {
+          html += pdfBarBlock('Средний чек по категориям', entries.sort((a,b)=>b.avg-a.avg).slice(0,12).map(e => ({
+            label: e.label, value: e.avg, color: e.color
+          })));
+        }
+      }
+      if (charts.includes('weekend')) {
+        let wdSum = 0, wdCnt = 0, weSum = 0, weCnt = 0;
+        expenses.forEach(tx => {
+          if (tx.autopayStatus === 'error') return;
+          const day = new Date(tx.date + 'T12:00:00').getDay();
+          const isWe = day === 0 || day === 6;
+          if (isWe) { weSum += tx.amount; weCnt += 1; }
+          else { wdSum += tx.amount; wdCnt += 1; }
+        });
+        html += pdfBarBlock('Выходные vs будни', [
+          { label: 'Будни ср. чек', value: wdCnt ? roundMoney(wdSum / wdCnt) : 0, color: '#0EA5E9' },
+          { label: 'Выходные ср. чек', value: weCnt ? roundMoney(weSum / weCnt) : 0, color: '#D97706' },
+          { label: 'Будни сумма', value: roundMoney(wdSum), color: '#38BDF8' },
+          { label: 'Выходные сумма', value: roundMoney(weSum), color: '#FBBF24' }
+        ]);
+      }
+      if (charts.includes('cumulative')) {
+        const fromD = from || (expenses[0] && expenses.slice().sort((a,b)=>a.date.localeCompare(b.date))[0]?.date) || today();
+        const toD = to || today();
+        const dates = eachDate(fromD, toD);
+        const byDay = {};
+        expenses.forEach(tx => {
+          if (tx.autopayStatus === 'error') return;
+          byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount;
+        });
+        let run = 0;
+        const items = [];
+        dates.forEach(d => {
+          run = roundMoney(run + (byDay[d] || 0));
+          if (byDay[d]) items.push({ label: formatDate(d), value: run, color: '#DC2626' });
+        });
+        html += pdfBarBlock('Накопительные траты (по дням с расходами)', items.slice(-15));
+        html += `<p style="margin-top:-8px;color:#64748b">Итого накопительно: ${formatMoney(run)}</p>`;
+      }
+      if (charts.includes('balance')) {
+        // simplified monthly net balance contribution
+        const map = {};
+        incomes.forEach(t => {
+          const k = t.date.slice(0, 7);
+          if (!map[k]) map[k] = 0;
+          map[k] = roundMoney(map[k] + t.amount);
+        });
+        expenses.forEach(t => {
+          if (t.autopayStatus === 'error') return;
+          const k = t.date.slice(0, 7);
+          if (!map[k]) map[k] = 0;
+          map[k] = roundMoney(map[k] - t.amount);
+        });
+        const keys = Object.keys(map).sort();
+        let run = roundMoney((state.initialBalances.visa || 0) + (state.initialBalances.mastercard || 0) + (state.initialBalances.cash || 0));
+        html += `<div class="section"><h2>Динамика баланса (по месяцам)</h2>`;
         if (!keys.length) html += `<p class="empty">Нет данных</p>`;
         else {
-          html += `<table><tr><th>Месяц</th><th class="r">Доходы</th><th class="r">Расходы</th><th class="r">Сбережения %</th></tr>`;
+          html += `<table><tr><th>Месяц</th><th class="r">Изменение</th><th class="r">Баланс (нараст.)</th></tr>`;
           keys.forEach(k => {
-            const pct = map[k].inc > 0 ? roundMoney(((map[k].inc - map[k].exp) / map[k].inc) * 100) : 0;
-            html += `<tr><td>${k}</td><td class="r">${formatMoney(map[k].inc)}</td>
-              <td class="r">${formatMoney(map[k].exp)}</td><td class="r">${pct}%</td></tr>`;
+            run = roundMoney(run + map[k]);
+            html += `<tr><td>${k}</td><td class="r">${formatMoney(map[k])}</td><td class="r">${formatMoney(run)}</td></tr>`;
           });
           html += `</table>`;
         }
         html += `</div>`;
+      }
+      if (charts.includes('heatmap')) {
+        const byDay = {};
+        expenses.forEach(tx => {
+          if (tx.autopayStatus === 'error') return;
+          byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount;
+        });
+        const entries = Object.entries(byDay).sort((a, b) => a[0].localeCompare(b[0]));
+        html += `<div class="section"><h2>Календарь трат</h2>`;
+        if (!entries.length) html += `<p class="empty">Нет данных</p>`;
+        else {
+          html += `<table><tr><th>Дата</th><th class="r">Сумма</th></tr>`;
+          entries.forEach(([d, v]) => {
+            html += `<tr><td>${formatDate(d)}</td><td class="r">${formatMoney(v)}</td></tr>`;
+          });
+          html += `</table>`;
+        }
+        html += `</div>`;
+      }
+      if (charts.includes('forecast')) {
+        const end = to && to < today() ? to : today();
+        const start = from || monthAgo();
+        const daysPast = Math.max(1, daysBetween(start, end) + 1);
+        const spent = expenses.filter(t => t.autopayStatus !== 'error' && t.date >= start && t.date <= end)
+          .reduce((s, t) => s + t.amount, 0);
+        const avg = spent / daysPast;
+        const target = endOfMonth(today());
+        const daysLeft = Math.max(0, daysBetween(end, target));
+        const extra = avg * daysLeft;
+        html += `<div class="section"><h2>Прогноз расходов</h2>
+          <table>
+            <tr><td>Период факта</td><td class="r">${formatDate(start)} — ${formatDate(end)}</td></tr>
+            <tr><td>Потрачено</td><td class="r">${formatMoney(spent)}</td></tr>
+            <tr><td>Среднее / день</td><td class="r">${formatMoney(avg)}</td></tr>
+            <tr><td>Дней до конца месяца</td><td class="r">${daysLeft}</td></tr>
+            <tr><td>Прогноз доп. трат</td><td class="r">${formatMoney(extra)}</td></tr>
+            <tr><td>Прогноз всего</td><td class="r">${formatMoney(spent + extra)}</td></tr>
+          </table></div>`;
+      }
+      if (charts.includes('autopayshare')) {
+        const totalExp = expenses.filter(t => t.autopayStatus !== 'error').reduce((s, t) => s + t.amount, 0);
+        const autoOk = expenses.filter(t => t.autopayId && t.autopayStatus !== 'error').reduce((s, t) => s + t.amount, 0);
+        html += pdfBarBlock('Доля автооплат в расходах', [
+          { label: 'Автооплаты', value: roundMoney(autoOk), color: '#D97706' },
+          { label: 'Остальные', value: roundMoney(Math.max(0, totalExp - autoOk)), color: '#94A3B8' }
+        ]);
+      }
+      if (charts.includes('burn')) {
+        const end = to && to < today() ? to : today();
+        const start = addDays(end, -13);
+        const byDay = {};
+        expenses.forEach(tx => {
+          if (tx.autopayStatus === 'error') return;
+          if (tx.date >= start && tx.date <= end) byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount;
+        });
+        const dates = eachDate(start, end);
+        const data = dates.map(d => roundMoney(byDay[d] || 0));
+        const avg = data.length ? roundMoney(data.reduce((a, b) => a + b, 0) / data.length) : 0;
+        html += pdfBarBlock('Скорость трат (14 дней)', dates.map((d, i) => ({
+          label: formatDate(d), value: data[i], color: '#DC2626'
+        })).filter(x => x.value > 0));
+        html += `<p style="margin-top:-8px;color:#64748b">Среднее: ${formatMoney(avg)}/день</p>`;
+      }
+      if (charts.includes('runway')) {
+        const end = today();
+        const start = addDays(end, -13);
+        const monthEnd = endOfMonth(end);
+        const daysLeft = Math.max(0, daysBetween(end, monthEnd));
+        let spent14 = 0;
+        const byDay = {};
+        state.transactions.filter(t => t.type === 'expense' && t.autopayStatus !== 'error').forEach(tx => {
+          if (tx.date >= start && tx.date <= end) byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount;
+        });
+        eachDate(start, end).forEach(d => { spent14 += byDay[d] || 0; });
+        const burn = roundMoney(spent14 / 14);
+        const daysCovered = burn > 0.009 ? Math.floor(total / burn) : 999;
+        const need = roundMoney(burn * daysLeft);
+        html += `<div class="section"><h2>Запас дней до конца месяца</h2>
+          <table>
+            <tr><td>На руках</td><td class="r">${formatMoney(total)}</td></tr>
+            <tr><td>Burn / день (14 дн.)</td><td class="r">${formatMoney(burn)}</td></tr>
+            <tr><td>Хватит дней</td><td class="r">${daysCovered > 90 ? '90+' : daysCovered}</td></tr>
+            <tr><td>Дней до конца месяца</td><td class="r">${daysLeft}</td></tr>
+            <tr><td>Нужно до конца месяца</td><td class="r">${formatMoney(need)}</td></tr>
+            <tr><td>Статус</td><td class="r">${daysCovered >= daysLeft ? 'запаса достаточно' : 'запаса может не хватить'}</td></tr>
+          </table></div>`;
+      }
+      if (charts.includes('payday')) {
+        const allInc = state.transactions.filter(t => t.type === 'income').sort((a, b) => b.amount - a.amount);
+        const avgInc = allInc.length ? allInc.reduce((s, t) => s + t.amount, 0) / allInc.length : 0;
+        const threshold = Math.max(avgInc * 1.25, avgInc + 1);
+        const big = allInc.filter(t => t.amount >= threshold).slice(0, 8);
+        const expAll = state.transactions.filter(t => t.type === 'expense' && t.autopayStatus !== 'error');
+        html += `<div class="section"><h2>Эффект после крупного дохода</h2>`;
+        if (!big.length) html += `<p class="empty">Нет крупных доходов</p>`;
+        else {
+          html += `<table><tr><th>Доход</th><th class="r">Сумма дохода</th><th class="r">Траты за 7 дней</th></tr>`;
+          big.forEach(inc => {
+            const to7 = addDays(inc.date, 6);
+            let sum = 0;
+            expAll.forEach(tx => {
+              if (tx.date >= inc.date && tx.date <= to7) sum += tx.amount;
+            });
+            html += `<tr><td>${formatDate(inc.date)}</td><td class="r">${formatMoney(inc.amount)}</td><td class="r">${formatMoney(sum)}</td></tr>`;
+          });
+          html += `</table>`;
+        }
+        html += `</div>`;
+      }
+      if (charts.includes('goal')) {
+        let goal = 0;
+        try { goal = roundMoney(localStorage.getItem('budget_savings_goal') || 0); } catch (e) {}
+        const pct = goal > 0 ? Math.min(100, roundMoney((total / goal) * 100)) : 0;
+        html += `<div class="section"><h2>Цель накопления</h2>
+          <table>
+            <tr><td>Цель</td><td class="r">${goal > 0 ? formatMoney(goal) : 'не задана'}</td></tr>
+            <tr><td>Сейчас на счетах</td><td class="r">${formatMoney(total)}</td></tr>
+            <tr><td>Прогресс</td><td class="r">${goal > 0 ? pct + '%' : '—'}</td></tr>
+            <tr><td>Осталось</td><td class="r">${goal > 0 ? formatMoney(Math.max(0, goal - total)) : '—'}</td></tr>
+          </table></div>`;
       }
 
       if (document.getElementById('pdfTx')?.checked) {
@@ -6670,6 +7447,7 @@
       renderStats();
       renderAccountBalances();
       renderAutopayList();
+      renderDebtList();
       renderPlannedList();
       renderExpenseAllocList();
       renderIncomeList();
