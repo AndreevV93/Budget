@@ -3329,16 +3329,29 @@
       let allInc = 0, allExp = 0;
       state.transactions.forEach(tx => {
         if (tx.type === 'income') allInc = roundMoney(allInc + tx.amount);
-        if (tx.type === 'expense') allExp = roundMoney(allExp + tx.amount);
+        if (tx.type === 'expense') {
+          if (tx.autopayStatus === 'error') return;
+          allExp = roundMoney(allExp + tx.amount);
+        }
       });
-      const expected = roundMoney(init + allInc - allExp);
+      // долги: выданные суммы уходят, возвраты (фактические) возвращаются
+      let debtOut = 0, debtIn = 0;
+      (state.debts || []).forEach(d => {
+        debtOut = roundMoney(debtOut + (Number(d.amount) || 0));
+        (d.repayments || []).forEach(r => {
+          debtIn = roundMoney(debtIn + (Number(r.amount) || 0));
+        });
+      });
+      const expected = roundMoney(init + allInc - allExp - debtOut + debtIn);
       const check = document.getElementById('balCheckHint');
       if (check) {
         if (Math.abs(expected - total) < 0.02) {
-          check.textContent = `Сверка OK: старт ${formatMoney(init)} + доходы − расходы = ${formatMoney(expected)}`;
+          check.textContent = debtOut > 0 || debtIn > 0
+            ? `Сверка OK: старт + доходы − расходы − долги + возвраты = ${formatMoney(expected)}`
+            : `Сверка OK: старт ${formatMoney(init)} + доходы − расходы = ${formatMoney(expected)}`;
           check.style.color = 'var(--income)';
         } else {
-          check.textContent = `Расхождение сверки: ожидали ${formatMoney(expected)}, на счетах ${formatMoney(total)}. Проверьте счёт операции.`;
+          check.textContent = `Расхождение сверки: ожидали ${formatMoney(expected)}, на счетах ${formatMoney(total)}. Учтены долги/возвраты и ошибки автооплат.`;
           check.style.color = 'var(--expense)';
         }
       }
