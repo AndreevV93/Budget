@@ -1898,9 +1898,15 @@
         <input type="text" id="expenseNote" placeholder="Например: продукты">
       </div>
 
-      <div class="card-title" style="margin-top:14px">Погашение предполагаемых <button type="button" class="help-tip" data-help="alloc">?</button></div>
-      <p class="text-sm text-muted mb-2">Можно погасить <b>частью</b> расхода. Сумма — сколько из этого чека идёт в план. Галочка «полное погашение» закрывает план даже если суммы не совпадают.</p>
-      <div class="alloc-list" id="expenseAllocList"></div>
+      <label class="alloc-check" style="display:flex;align-items:center;gap:8px;margin-top:14px;cursor:pointer">
+        <input type="checkbox" id="expenseAllocEnable">
+        <span style="font-weight:600">Погашение предполагаемых</span>
+        <button type="button" class="help-tip" data-help="alloc" style="margin-left:0">?</button>
+      </label>
+      <div id="expenseAllocWrap" class="hidden">
+        <p class="text-sm text-muted mb-2" style="margin-top:8px">Можно погасить <b>частью</b> расхода. Сумма — сколько из этого чека идёт в план. Галочка «полное погашение» закрывает план даже если суммы не совпадают.</p>
+        <div class="alloc-list" id="expenseAllocList"></div>
+      </div>
 
       <button class="btn btn-primary" id="btnAddExpense" style="margin-top:8px">Добавить расход</button>
       <button class="btn btn-ghost hidden" id="btnCancelExpenseEdit" style="width:100%;margin-top:8px">Отмена редактирования</button>
@@ -5832,7 +5838,16 @@
       });
     }
 
+    function setExpenseAllocVisible(on) {
+      const cb = document.getElementById('expenseAllocEnable');
+      const wrap = document.getElementById('expenseAllocWrap');
+      if (cb) cb.checked = !!on;
+      if (wrap) wrap.classList.toggle('hidden', !on);
+      if (on) renderExpenseAllocList();
+    }
+
     function getExpenseAllocations() {
+      if (!document.getElementById('expenseAllocEnable')?.checked) return [];
       const rows = document.querySelectorAll('#expenseAllocList .alloc-row');
       const out = [];
       rows.forEach(row => {
@@ -5875,7 +5890,7 @@
       document.getElementById('splitsList').innerHTML = '';
       addSplitRow();
       updateRemaining();
-      renderExpenseAllocList();
+      setExpenseAllocVisible(false);
     }
 
     function startEditExpense(id) {
@@ -5901,7 +5916,9 @@
       (tx.allocations || []).forEach(a => {
         pref[a.plannedId] = { amount: a.amount || 0, full: !!a.full };
       });
-      renderExpenseAllocList(pref);
+      const hasAlloc = (tx.allocations || []).length > 0;
+      setExpenseAllocVisible(hasAlloc);
+      if (hasAlloc) renderExpenseAllocList(pref);
 
       // Перейти на экран расходов
       document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -5975,7 +5992,23 @@
         const el = e.target;
         if (!isAmountFormulaField(el)) return;
         if (el.dataset.formulaLock === '1') return;
+        // было 0 — при вводе скобки/цифры/оператора убираем ведущий 0: 0( → (, 05 → 5 (0.5 оставляем)
+        const v = String(el.value || '');
+        if (/^0+[(\+\-*/]/.test(v) || /^0+[1-9]/.test(v)) {
+          el.dataset.formulaLock = '1';
+          el.value = v.replace(/^0+/, '');
+          delete el.dataset.formulaLock;
+        }
         tryEvalAmountFormula(el);
+      });
+      // фокус на «0» — выделить всё, чтобы следующий символ заменил ноль
+      document.addEventListener('focusin', e => {
+        const el = e.target;
+        if (!isAmountFormulaField(el)) return;
+        const v = String(el.value || '').trim();
+        if (v === '0' || v === '0.0' || v === '0.00') {
+          try { el.select(); } catch (err) {}
+        }
       });
       document.addEventListener('click', e => {
         const fx = e.target.closest('.btn-fx');
@@ -6338,6 +6371,9 @@
 
       // Expense amount change
       document.getElementById('expenseAmount').addEventListener('input', () => autoFillLastSplit());
+      document.getElementById('expenseAllocEnable')?.addEventListener('change', e => {
+        setExpenseAllocVisible(e.target.checked);
+      });
 
       // Add split
       document.getElementById('btnAddSplit').addEventListener('click', () => addSplitRow());
