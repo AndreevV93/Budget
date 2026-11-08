@@ -1601,7 +1601,7 @@
           <div class="form-row">
             <div class="form-group">
               <label>Сумма (Br)</label>
-              <input type="number" id="transferAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+              <input type="text" id="transferAmount" inputmode="decimal" placeholder="0" inputmode="decimal" min="0" step="0.01">
             </div>
             <div class="form-group">
               <label>📅 Дата</label>
@@ -1751,7 +1751,7 @@
         </div>
         <div class="form-group hidden" id="curiousGoalWrap">
           <label>Цель накопления (Br)</label>
-          <input type="number" id="curiousGoalAmount" placeholder="Например: 1000" inputmode="decimal" min="0" step="0.01">
+          <input type="text" id="curiousGoalAmount" inputmode="decimal" placeholder="Например: 1000" inputmode="decimal" min="0" step="0.01">
           <p class="text-sm text-muted" style="margin-top:6px">Прогресс = сумма на всех счетах сейчас</p>
         </div>
         <div class="chart-container tall" id="curiousChartWrap">
@@ -1789,7 +1789,7 @@
       </div>
       <div class="form-group">
         <label>Сумма (Br)</label>
-        <input type="number" id="incomeAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+        <input type="text" id="incomeAmount" inputmode="decimal" placeholder="0" inputmode="decimal" min="0" step="0.01">
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -1847,7 +1847,7 @@
       </div>
       <div class="form-group">
         <label>Общая сумма (Br)</label>
-        <input type="number" id="expenseAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+        <input type="text" id="expenseAmount" inputmode="decimal" placeholder="0" inputmode="decimal" min="0" step="0.01">
       </div>
       <div class="form-group">
         <label>📅 Дата операции</label>
@@ -1899,7 +1899,7 @@
         </div>
         <div class="form-group">
           <label>Сумма долга (Br)</label>
-          <input type="number" id="debtAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+          <input type="text" id="debtAmount" inputmode="decimal" placeholder="0" inputmode="decimal" min="0" step="0.01">
         </div>
         <div class="form-group">
           <label>📅 Дата выдачи</label>
@@ -1925,7 +1925,7 @@
       <p class="text-sm text-muted mb-2">Регулярные списания. В день оплаты списываются сами; при нехватке денег — ошибка в истории.</p>
       <div class="form-group">
         <label>Сумма (Br)</label>
-        <input type="number" id="autopayAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+        <input type="text" id="autopayAmount" inputmode="decimal" placeholder="0" inputmode="decimal" min="0" step="0.01">
       </div>
       <div class="form-group">
         <label>Категория</label>
@@ -1985,7 +1985,7 @@
 
       <div class="form-group">
         <label>Сумма (Br)</label>
-        <input type="number" id="plannedAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+        <input type="text" id="plannedAmount" inputmode="decimal" placeholder="0" inputmode="decimal" min="0" step="0.01">
       </div>
       <div class="form-group">
         <label>📅 Ожидаемая дата (необязательно)</label>
@@ -2270,7 +2270,7 @@
       <p class="text-sm text-muted mb-2" id="debtRepayInfo"></p>
       <div class="form-group">
         <label>Сумма возврата (Br)</label>
-        <input type="number" id="debtRepayAmount" placeholder="0" inputmode="decimal" min="0" step="0.01">
+        <input type="text" id="debtRepayAmount" inputmode="decimal" placeholder="0" inputmode="decimal" min="0" step="0.01">
       </div>
       <div class="form-group">
         <label>Куда пришли деньги</label>
@@ -2833,6 +2833,53 @@
       const d = new Date();
       d.setMonth(d.getMonth() - 1);
       return localISODate(d);
+    }
+
+    /** Калькулятор в полях сумм: =(2.81*5) → результат после закрытия всех скобок */
+    function tryEvalAmountFormula(el) {
+      if (!el || el.tagName !== 'INPUT') return false;
+      const raw = String(el.value || '');
+      if (!raw.startsWith('=')) return false;
+      const expr = raw.slice(1);
+      let depth = 0;
+      let sawOpen = false;
+      for (let i = 0; i < expr.length; i++) {
+        const ch = expr[i];
+        if (ch === '(') { depth++; sawOpen = true; }
+        else if (ch === ')') {
+          depth--;
+          if (depth < 0) return false;
+        }
+      }
+      // ждём, пока все скобки закроются
+      if (!sawOpen || depth !== 0) return false;
+      // только цифры и + - * / . ( ) пробел
+      if (!/^[0-9+\-*/().\s]+$/.test(expr)) return false;
+      try {
+        const val = Function('"use strict"; return (' + expr + ')')();
+        if (typeof val !== 'number' || !isFinite(val)) return false;
+        const rounded = roundMoney(val);
+        el.dataset.formulaLock = '1';
+        el.value = String(rounded);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        delete el.dataset.formulaLock;
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function isAmountFormulaField(el) {
+      if (!el || el.tagName !== 'INPUT') return false;
+      if (el.classList.contains('split-amount') || el.classList.contains('alloc-amount')) return true;
+      const ids = [
+        'expenseAmount', 'incomeAmount', 'transferAmount', 'debtAmount',
+        'debtRepayAmount', 'autopayAmount', 'plannedAmount', 'curiousGoalAmount',
+        'setupVisa', 'setupMastercard', 'setupCash',
+        'initialVisa', 'initialMastercard', 'initialCash'
+      ];
+      return ids.includes(el.id);
     }
 
     function toast(msg, ms) {
@@ -5109,7 +5156,7 @@
         <select class="split-cat">
           ${buildCategoryOptions(categoryId)}
         </select>
-        <input type="number" class="split-amount" placeholder="0" inputmode="decimal" min="0" step="0.01" value="${amountVal}">
+        <input type="text" class="split-amount" placeholder="0" inputmode="decimal" value="${amountVal}">
         <button type="button" class="remove-btn" aria-label="Удалить">×</button>
         <input type="text" class="split-note" placeholder="Заметка к категории" value="${noteVal}">
       `;
@@ -5686,7 +5733,7 @@
             </div>
           </div>
           <div class="alloc-row-controls">
-            <input type="number" class="alloc-amount" placeholder="Часть расхода" min="0" step="0.01" inputmode="decimal" value="${curAmt || ''}">
+            <input type="text" class="alloc-amount" placeholder="Часть расхода" inputmode="decimal" value="${curAmt || ''}">
             <button type="button" class="btn btn-ghost btn-sm alloc-rem-btn">Остаток</button>
           </div>
           <label class="alloc-check" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.82rem">
@@ -5845,6 +5892,13 @@
 
     // ========== EVENT HANDLERS ==========
     function initEvents() {
+      // Калькулятор =( ... ) в полях сумм
+      document.addEventListener('input', e => {
+        const el = e.target;
+        if (!isAmountFormulaField(el)) return;
+        if (el.dataset.formulaLock === '1') return;
+        tryEvalAmountFormula(el);
+      });
       // Nav
       document.querySelectorAll('.nav-item').forEach(btn => {
         btn.addEventListener('click', () => navigateToScreen(btn.dataset.screen));
