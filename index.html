@@ -298,8 +298,8 @@
 
     .period-tab {
       flex: 1;
-      min-width: 90px;
-      padding: 10px 12px;
+      min-width: 72px;
+      padding: 10px 10px;
       border: 2px solid var(--border);
       border-radius: 12px;
       background: white;
@@ -1650,6 +1650,7 @@
     <div class="period-tabs">
       <button class="period-tab active" data-period="month">Месяц</button>
       <button class="period-tab" data-period="range">Период</button>
+      <button class="period-tab" data-period="sinceWork" title="С момента получения последнего дохода с источника «Работа»">С «Работы»</button>
       <button class="period-tab" data-period="all">Всё время</button>
     </div>
     <div class="date-range" id="dateRange">
@@ -1878,7 +1879,7 @@
       <div class="form-group">
         <label>Общая сумма (Br) <span class="text-muted" style="font-weight:400;font-size:0.75rem">формула (2*3) · «=» = сумма категорий</span></label>
         <div class="amount-fx-row">
-          <input type="text" id="expenseAmount" inputmode="text" placeholder="0 или (2.81*5)" autocomplete="off">
+          <input type="text" id="expenseAmount" inputmode="decimal" placeholder="0 или (2.81*5)" autocomplete="off">
           <button type="button" class="btn-fx" data-fx-for="expenseAmount" title="Сумма чека = сумма категорий">=</button>
         </div>
       </div>
@@ -2070,6 +2071,7 @@
     <div class="period-tabs" id="historyPeriodTabs">
       <button class="period-tab active" data-hist-period="month">Месяц</button>
       <button class="period-tab" data-hist-period="range">Период</button>
+      <button class="period-tab" data-hist-period="sinceWork" title="С момента получения последнего дохода с источника «Работа»">С «Работы»</button>
       <button class="period-tab" data-hist-period="all">Всё время</button>
     </div>
     <div class="date-range" id="historyDateRange">
@@ -2239,6 +2241,7 @@
         <select id="pdfPeriod">
           <option value="stats">Как на экране «Статистика» сейчас</option>
           <option value="month">Последние 30 дней</option>
+          <option value="sinceWork">С последнего дохода «Работа»</option>
           <option value="all" selected>Всё время</option>
           <option value="custom">Свои даты</option>
         </select>
@@ -3213,10 +3216,27 @@
     }
 
     // ========== PERIOD & FILTERS ==========
+    /** Дата последнего дохода с источника, имя которого = «Работа» (без учёта регистра) */
+    function getLastWorkIncomeDate() {
+      const src = (state.sources || []).find(s => (s.name || '').trim().toLowerCase() === 'работа');
+      if (!src) return null;
+      let best = null;
+      (state.transactions || []).forEach(t => {
+        if (t.type !== 'income' || t.sourceId !== src.id || !t.date) return;
+        if (!best || t.date > best) best = t.date;
+      });
+      return best;
+    }
+
     function getDateRange() {
       if (state.period === 'all') return { from: null, to: null };
       if (state.period === 'month') {
         return { from: monthAgo(), to: today() };
+      }
+      if (state.period === 'sinceWork') {
+        const from = getLastWorkIncomeDate();
+        if (!from) return { from: today(), to: today() };
+        return { from, to: today() };
       }
       return {
         from: state.dateFrom || monthAgo(),
@@ -5009,6 +5029,11 @@
       if (state.histPeriod === 'month') {
         return { from: monthAgo(), to: today() };
       }
+      if (state.histPeriod === 'sinceWork') {
+        const from = getLastWorkIncomeDate();
+        if (!from) return { from: today(), to: today() };
+        return { from, to: today() };
+      }
       return {
         from: state.histDateFrom || monthAgo(),
         to: state.histDateTo || today()
@@ -5239,7 +5264,7 @@
         <select class="split-cat">
           ${buildCategoryOptions(categoryId)}
         </select>
-        <input type="text" class="split-amount" placeholder="0 или (2*3)" inputmode="text" value="${amountVal}" autocomplete="off">
+        <input type="text" class="split-amount" placeholder="0 или (2*3)" inputmode="decimal" value="${amountVal}" autocomplete="off">
         <button type="button" class="btn-fx split-fx" title="Уравнять с суммой чека">=</button>
         <button type="button" class="remove-btn" aria-label="Удалить">×</button>
         <input type="text" class="split-note" placeholder="Заметка к категории" value="${noteVal}">
@@ -6189,6 +6214,9 @@
             document.getElementById('dateFrom').value = state.dateFrom || monthAgo();
             document.getElementById('dateTo').value = state.dateTo || today();
           }
+          if (state.period === 'sinceWork' && !getLastWorkIncomeDate()) {
+            toast('Нет дохода с источника «Работа» — период пустой');
+          }
           renderStats();
         });
       });
@@ -6223,6 +6251,9 @@
           if (state.histPeriod === 'range') {
             document.getElementById('historyDateFrom').value = state.histDateFrom || monthAgo();
             document.getElementById('historyDateTo').value = state.histDateTo || today();
+          }
+          if (state.histPeriod === 'sinceWork' && !getLastWorkIncomeDate()) {
+            toast('Нет дохода с источника «Работа» — период пустой');
           }
           state.histPage = 1;
           renderHistory();
@@ -7013,6 +7044,11 @@
       }
       if (mode === 'all') return { from: null, to: null };
       if (mode === 'stats') return getDateRange();
+      if (mode === 'sinceWork') {
+        const from = getLastWorkIncomeDate();
+        if (!from) return { from: today(), to: today() };
+        return { from, to: today() };
+      }
       // month = last 30 days
       return { from: monthAgo(), to: today() };
     }
