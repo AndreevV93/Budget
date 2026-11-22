@@ -1836,7 +1836,35 @@
         <label>Заметка (необязательно)</label>
         <input type="text" id="incomeNote" placeholder="Например: зарплата">
       </div>
+      <label class="alloc-check" style="display:flex;align-items:center;gap:8px;margin:10px 0;cursor:pointer">
+        <input type="checkbox" id="incomeReimburseEnable">
+        <span style="font-weight:600">Это возврат по расходу</span>
+      </label>
+      <div id="incomeReimburseWrap" class="hidden">
+        <p class="text-sm text-muted mb-2">Сумма уменьшит чистый расход (по операции или категории). Можно несколько возвратов на один чек.</p>
+        <div class="form-group">
+          <label>Привязка</label>
+          <div class="period-tabs" id="reimburseModeTabs" style="margin-bottom:8px">
+            <button type="button" class="period-tab active" data-reimburse-mode="expense">К операции</button>
+            <button type="button" class="period-tab" data-reimburse-mode="category">К категории</button>
+          </div>
+        </div>
+        <div class="form-group" id="reimburseExpenseGroup">
+          <label>Расход</label>
+          <select id="incomeReimburseExpense"></select>
+        </div>
+        <div class="form-group" id="reimburseSplitGroup">
+          <label>Строка чека (категория / подкатегория)</label>
+          <select id="incomeReimburseSplit"></select>
+          <p class="text-sm text-muted" style="margin-top:4px">«Весь чек» — пропорционально всем строкам; иначе только выбранная</p>
+        </div>
+        <div class="form-group hidden" id="reimburseCategoryGroup">
+          <label>Категория расхода</label>
+          <select id="incomeReimburseCategory"></select>
+        </div>
+      </div>
       <button class="btn btn-primary" id="btnAddIncome">Добавить доход</button>
+      <button class="btn btn-ghost hidden" id="btnCancelIncomeEdit" style="width:100%;margin-top:8px">Отмена редактирования</button>
     </div>
 
     <div class="card">
@@ -3268,9 +3296,255 @@
       });
     }
 
+    
+    function getExpenseReimbursements(expenseId, excludeIncomeId) {
+      if (!expenseId) return [];
+      return (state.transactions || []).filter(t =>
+        t.type === 'income' &&
+        t.reimbursement &&
+        t.reimbursement.mode === 'expense' &&
+        t.reimbursement.expenseId === expenseId &&
+        (!excludeIncomeId || t.id !== excludeIncomeId)
+      );
+    }
+
+    function getExpenseReimbursedAmount(expenseId, splitCategoryId, excludeIncomeId) {
+      const list = getExpenseReimbursements(expenseId, excludeIncomeId);
+      if (splitCategoryId) {
+        return roundMoney(list
+          .filter(t => t.reimbursement && t.reimbursement.splitCategoryId === splitCategoryId)
+          .reduce((s, t) => s + (Number(t.amount) || 0), 0));
+      }
+      return roundMoney(list.reduce((s, t) => s + (Number(t.amount) || 0), 0));
+    }
+
+    function getCategoryReimbursedAmount(rootId, from, to, excludeIncomeId) {
+      if (!rootId) return 0;
+      return roundMoney(
+        (state.transactions || [])
+          .filter(t => {
+            if (excludeIncomeId && t.id === excludeIncomeId) return false;
+            if (t.type !== 'income' || !t.reimbursement || t.reimbursement.mode !== 'category') return false;
+            if (getRootCategoryId(t.reimbursement.categoryId) !== rootId) return false;
+            if (from && t.date < from) return false;
+            if (to && t.date > to) return false;
+            return true;
+          })
+          .reduce((s, t) => s + (Number(t.amount) || 0), 0)
+      );
+    }
+
+    function getEffectiveExpenseSplits(tx) {
+      const splits = (tx.splits && tx.splits.length)
+        ? tx.splits.map(s => ({ categoryId: s.categoryId, amount: roundMoney(s.amount || 0), note: s.note }))
+        : [{ categoryId: '_none', amount: roundMoney(tx.amount), note: undefined }];
+      let amounts = splits.map(s => s.amount);
+      const rebs = getExpenseReimbursements(tx.id);
+
+      // 1) возвраты на конкретную строку чека
+      rebs.filter(t => t.reimbursement && t.reimbursement.splitCategoryId).forEach(t => {
+        const catId = t.reimbursement.splitCategoryId;
+        let idx = splits.findIndex(s => s.categoryId === catId);
+        if (idx < 0) {
+          idx = splits.findIndex(s => getRootCategoryId(s.categoryId) === getRootCategoryId(catId));
+        }
+        if (idx >= 0) {
+          amounts[idx] = Math.max(0, roundMoney(amounts[idx] - (Number(t.amount) || 0)));
+        }
+      });
+
+      // 2) возвраты на весь чек — пропорционально исходным долям
+      const wholeReb = roundMoney(
+        rebs.filter(t => t.reimbursement && !t.reimbursement.splitCategoryId)
+          .reduce((s, t) => s + (Number(t.amount) || 0), 0)
+      );
+      if (wholeReb > 0.009) {
+        const origTotal = Math.max(0.01, splits.reduce((s, sp) => s + (sp.amount || 0), 0));
+        amounts = amounts.map((a, i) => {
+          const share = ((splits[i].amount || 0) / origTotal) * wholeReb;
+          return Math.max(0, roundMoney(a - share));
+        });
+      }
+
+      return splits.map((s, i) => ({
+        categoryId: s.categoryId,
+        amount: amounts[i],
+        note: s.note
+      }));
+    }
+
+    function getExpenseNetAmount(tx) {
+      return Math.max(0, roundMoney(
+        getEffectiveExpenseSplits(tx).reduce((s, sp) => s + (sp.amount || 0), 0)
+      ));
+    }
+
+    function getReimbursementLabel(tx) {
+      if (!tx || !tx.reimbursement) return '';
+      const r = tx.reimbursement;
+      if (r.mode === 'expense') {
+        const exp = (state.transactions || []).find(t => t.id === r.expenseId);
+        if (!exp) return 'возврат: операция';
+        if (r.splitCategoryId) {
+          return 'возврат: ' + getCategoryLabel(r.splitCategoryId) +
+            ' · ' + formatDate(exp.date) + ' · чек ' + formatMoney(exp.amount);
+        }
+        const first = exp.splits && exp.splits[0];
+        const cat = first ? getCategoryLabel(first.categoryId) : 'расход';
+        return 'возврат: весь чек · ' + cat + ' · ' + formatDate(exp.date) + ' · ' + formatMoney(exp.amount);
+      }
+      if (r.mode === 'category') {
+        return 'возврат: ' + getCategoryLabel(r.categoryId);
+      }
+      return 'возврат';
+    }
+
+    function fillReimburseExpenseSelect(selectedId) {
+      const sel = document.getElementById('incomeReimburseExpense');
+      if (!sel) return;
+      const items = (state.transactions || [])
+        .filter(t => t.type === 'expense' && t.autopayStatus !== 'error')
+        .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
+        .slice(0, 80);
+      sel.innerHTML = items.map(tx => {
+        const first = tx.splits && tx.splits[0];
+        const cat = first ? getCategoryLabel(first.categoryId) : 'расход';
+        const reb = getExpenseReimbursedAmount(tx.id);
+        const net = getExpenseNetAmount(tx);
+        const extra = reb > 0 ? ' · уже вернули ' + formatMoney(reb) + ', нетто ' + formatMoney(net) : '';
+        const selAttr = selectedId && selectedId === tx.id ? ' selected' : '';
+        return '<option value="' + tx.id + '"' + selAttr + '>' + formatDate(tx.date) + ' · ' + cat + ' · ' + formatMoney(tx.amount) + extra + '</option>';
+      }).join('') || '<option value="">Нет расходов</option>';
+      fillReimburseSplitSelect(selectedId || sel.value);
+    }
+
+    function fillReimburseSplitSelect(expenseId, selectedCatId) {
+      const sel = document.getElementById('incomeReimburseSplit');
+      if (!sel) return;
+      const exp = (state.transactions || []).find(t => t.id === expenseId && t.type === 'expense');
+      if (!exp) {
+        sel.innerHTML = '<option value="">Весь чек</option>';
+        return;
+      }
+      const splits = (exp.splits && exp.splits.length)
+        ? exp.splits
+        : [{ categoryId: '', amount: exp.amount }];
+      let html = '<option value="">Весь чек (пропорционально)</option>';
+      // unique category lines
+      const seen = new Set();
+      splits.forEach(sp => {
+        const id = sp.categoryId || '';
+        if (seen.has(id)) return;
+        seen.add(id);
+        const reb = getExpenseReimbursedAmount(exp.id, id);
+        const extra = reb > 0 ? ' · уже вернули ' + formatMoney(reb) : '';
+        const selAttr = selectedCatId && selectedCatId === id ? ' selected' : '';
+        html += '<option value="' + id + '"' + selAttr + '>' +
+          getCategoryLabel(id) + ' · ' + formatMoney(sp.amount) + extra + '</option>';
+      });
+      sel.innerHTML = html;
+    }
+
+    function fillReimburseCategorySelect(selectedId) {
+      const sel = document.getElementById('incomeReimburseCategory');
+      if (!sel) return;
+      sel.innerHTML = buildCategoryOptions(selectedId || sel.value || '');
+    }
+
+    function setReimburseMode(mode) {
+      document.querySelectorAll('#reimburseModeTabs .period-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.reimburseMode === mode);
+      });
+      const expG = document.getElementById('reimburseExpenseGroup');
+      const splitG = document.getElementById('reimburseSplitGroup');
+      const catG = document.getElementById('reimburseCategoryGroup');
+      if (expG) expG.classList.toggle('hidden', mode !== 'expense');
+      if (splitG) splitG.classList.toggle('hidden', mode !== 'expense');
+      if (catG) catG.classList.toggle('hidden', mode !== 'category');
+      if (mode === 'expense') fillReimburseExpenseSelect(document.getElementById('incomeReimburseExpense')?.value);
+      if (mode === 'category') fillReimburseCategorySelect();
+    }
+
+    function setIncomeReimburseVisible(on) {
+      const cb = document.getElementById('incomeReimburseEnable');
+      const wrap = document.getElementById('incomeReimburseWrap');
+      if (cb) cb.checked = !!on;
+      if (wrap) wrap.classList.toggle('hidden', !on);
+      if (on) {
+        const active = document.querySelector('#reimburseModeTabs .period-tab.active');
+        setReimburseMode(active?.dataset.reimburseMode || 'expense');
+      }
+    }
+
+    let editingIncomeId = null;
+
+    function setIncomeAccountUI(account) {
+      const acc = normalizeAccount(account);
+      document.querySelectorAll('#incomeAccountToggle .account-option').forEach(opt => {
+        const isActive = opt.dataset.account === acc;
+        opt.classList.toggle('active', isActive);
+        const radio = opt.querySelector('input');
+        if (radio) radio.checked = isActive;
+      });
+    }
+
+    function resetIncomeForm() {
+      editingIncomeId = null;
+      const title = document.querySelector('#screen-income .card-title');
+      if (title) title.textContent = 'Добавить доход';
+      const btn = document.getElementById('btnAddIncome');
+      if (btn) btn.textContent = 'Добавить доход';
+      document.getElementById('btnCancelIncomeEdit')?.classList.add('hidden');
+      document.getElementById('incomeAmount').value = '';
+      document.getElementById('incomeNote').value = '';
+      document.getElementById('incomeDate').value = today();
+      setIncomeAccountUI('visa');
+      setIncomeReimburseVisible(false);
+    }
+
+    function startEditIncome(id) {
+      const tx = state.transactions.find(t => t.id === id && t.type === 'income');
+      if (!tx) return toast('Доход не найден');
+      editingIncomeId = id;
+      const title = document.querySelector('#screen-income .card-title');
+      if (title) title.textContent = 'Редактировать доход';
+      const btn = document.getElementById('btnAddIncome');
+      if (btn) btn.textContent = 'Сохранить изменения';
+      document.getElementById('btnCancelIncomeEdit')?.classList.remove('hidden');
+
+      document.getElementById('incomeAmount').value = tx.amount;
+      document.getElementById('incomeDate').value = tx.date;
+      document.getElementById('incomeNote').value = tx.note || '';
+      setIncomeAccountUI(tx.account || 'visa');
+      fillSourceSelect();
+      const srcSel = document.getElementById('incomeSource');
+      if (srcSel && tx.sourceId) srcSel.value = tx.sourceId;
+
+      if (tx.reimbursement) {
+        setIncomeReimburseVisible(true);
+        const mode = tx.reimbursement.mode || 'expense';
+        setReimburseMode(mode);
+        if (mode === 'expense') {
+          fillReimburseExpenseSelect(tx.reimbursement.expenseId);
+          fillReimburseSplitSelect(tx.reimbursement.expenseId, tx.reimbursement.splitCategoryId || '');
+        } else {
+          fillReimburseCategorySelect(tx.reimbursement.categoryId);
+        }
+      } else {
+        setIncomeReimburseVisible(false);
+      }
+
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      const navInc = document.querySelector('.nav-item[data-screen="income"]');
+      if (navInc) navInc.classList.add('active');
+      document.getElementById('screen-income')?.classList.add('active');
+      window.scrollTo(0, 0);
+    }
+
     function getFilteredExpenseAmount(tx) {
-      const splits = tx.splits || [];
-      if (!state.statsFilterCats.length) return roundMoney(tx.amount);
+      const splits = getEffectiveExpenseSplits(tx);
+      if (!state.statsFilterCats.length) return getExpenseNetAmount(tx);
       return roundMoney(splits
         .filter(sp => categoryMatchesFilter(sp.categoryId))
         .reduce((s, sp) => s + (sp.amount || 0), 0));
@@ -3405,7 +3679,12 @@
       const screen = document.getElementById('screen-' + name);
       if (screen) screen.classList.add('active');
       if (name === 'stats') renderStats();
-      if (name === 'income') { renderIncomeList(); fillSourceSelect(); }
+      if (name === 'income') {
+        renderIncomeList();
+        fillSourceSelect();
+        fillReimburseExpenseSelect();
+        fillReimburseCategorySelect();
+      }
       if (name === 'expense') {
         processAutopays();
         setExpenseTab(document.querySelector('#expenseSubTabs .sub-tab.active')?.dataset.expTab || 'new');
@@ -3512,11 +3791,27 @@
       renderAccountBalances();
       renderStatsFilters();
 
-      const incomes = filterTx('income');
+      const incomesAll = filterTx('income');
+      const incomes = incomesAll.filter(t => !t.reimbursement);
       const expenses = filterTx('expense');
+      const { from: rangeFrom, to: rangeTo } = getDateRange();
+
+      // Expense by category (нетто: минус возвраты по операциям и по категориям)
+      const expByCat = {};
+      expenses.forEach(tx => {
+        getEffectiveExpenseSplits(tx).forEach(sp => {
+          if (!categoryMatchesFilter(sp.categoryId)) return;
+          const rootId = getRootCategoryId(sp.categoryId);
+          expByCat[rootId] = (expByCat[rootId] || 0) + sp.amount;
+        });
+      });
+      Object.keys(expByCat).forEach(rootId => {
+        const catReb = getCategoryReimbursedAmount(rootId, rangeFrom, rangeTo);
+        expByCat[rootId] = Math.max(0, roundMoney(expByCat[rootId] - catReb));
+      });
 
       const totalIncome = incomes.reduce((s, t) => s + t.amount, 0);
-      const totalExpense = expenses.reduce((s, t) => s + getFilteredExpenseAmount(t), 0);
+      const totalExpense = roundMoney(Object.values(expByCat).reduce((s, v) => s + v, 0));
       const balance = totalIncome - totalExpense;
 
       document.getElementById('sumIncome').textContent = formatMoney(totalIncome);
@@ -3525,16 +3820,6 @@
       document.getElementById('sumBalance').style.color = balance >= 0 ? 'var(--income)' : 'var(--expense)';
 
       renderLinkedAnalysis(incomes, expenses);
-
-      // Expense by category (aggregate to top-level, respect filter)
-      const expByCat = {};
-      expenses.forEach(tx => {
-        (tx.splits || []).forEach(sp => {
-          if (!categoryMatchesFilter(sp.categoryId)) return;
-          const rootId = getRootCategoryId(sp.categoryId);
-          expByCat[rootId] = (expByCat[rootId] || 0) + sp.amount;
-        });
-      });
 
       const expLabels = [];
       const expData = [];
@@ -3657,6 +3942,45 @@
       }
     }
 
+    /** Линия нуля: при отрицательных значениях рисуем ось на 0, шкала уходит до минимума/максимума */
+    const zeroLinePlugin = {
+      id: 'zeroLine',
+      afterDraw(chart) {
+        const { ctx, chartArea, scales, options } = chart;
+        if (!chartArea || !scales) return;
+        const horizontal = options && options.indexAxis === 'y';
+        ctx.save();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#57534E';
+        ctx.setLineDash([5, 4]);
+        if (!horizontal && scales.y) {
+          const { min, max } = scales.y;
+          if (min < 0 && max >= 0) {
+            const y = scales.y.getPixelForValue(0);
+            if (y >= chartArea.top && y <= chartArea.bottom) {
+              ctx.beginPath();
+              ctx.moveTo(chartArea.left, y);
+              ctx.lineTo(chartArea.right, y);
+              ctx.stroke();
+            }
+          }
+        }
+        if (horizontal && scales.x) {
+          const { min, max } = scales.x;
+          if (min < 0 && max >= 0) {
+            const x = scales.x.getPixelForValue(0);
+            if (x >= chartArea.left && x <= chartArea.right) {
+              ctx.beginPath();
+              ctx.moveTo(x, chartArea.top);
+              ctx.lineTo(x, chartArea.bottom);
+              ctx.stroke();
+            }
+          }
+        }
+        ctx.restore();
+      }
+    };
+
     function showCuriousEmpty(show) {
       const empty = document.getElementById('curiousEmpty');
       const wrap = document.getElementById('curiousChartWrap');
@@ -3679,6 +4003,18 @@
       heat.classList.add('hidden');
       heat.innerHTML = '';
       destroyCuriousChart();
+      const plugins = Array.isArray(config.plugins) ? config.plugins.slice() : [];
+      if (!plugins.some(p => p && p.id === 'zeroLine')) plugins.push(zeroLinePlugin);
+      config.plugins = plugins;
+      if (config.options && config.options.scales) {
+        ['x', 'y'].forEach(axis => {
+          const s = config.options.scales[axis];
+          if (!s) return;
+          s.beginAtZero = true;
+          // небольшой запас по краям, чтобы крайние значения не прилипали к границе
+          if (s.grace == null) s.grace = '8%';
+        });
+      }
       curiousChart = new Chart(canvas, config);
     }
 
@@ -4211,6 +4547,7 @@
             scales: {
               x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } } },
               y: {
+                beginAtZero: true,
                 ticks: {
                   font: { size: 10 },
                   callback: v => v + '%'
@@ -4387,7 +4724,10 @@
             ...curiousBarOptions(),
             scales: {
               x: { ticks: { maxRotation: 45, minRotation: 0, font: { size: 9 }, autoSkip: true, maxTicksLimit: 8 } },
-              y: { ticks: { font: { size: 10 }, callback: v => (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v) } }
+              y: {
+                beginAtZero: true,
+                ticks: { font: { size: 10 }, callback: v => (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v) }
+              }
             }
           }
         });
@@ -4488,6 +4828,7 @@
     }
 
     function curiousLineOptions(unit) {
+      const isPct = unit === '%';
       return {
         responsive: true,
         maintainAspectRatio: false,
@@ -4495,16 +4836,21 @@
           legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
           tooltip: {
             callbacks: {
-              label: ctx => `${ctx.dataset.label}: ${formatMoney(ctx.raw)}`
+              label: ctx => isPct
+                ? `${ctx.dataset.label}: ${ctx.raw}%`
+                : `${ctx.dataset.label}: ${formatMoney(ctx.raw)}`
             }
           }
         },
         scales: {
           x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } } },
           y: {
+            beginAtZero: true,
             ticks: {
               font: { size: 10 },
-              callback: v => (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v)
+              callback: v => isPct
+                ? v + '%'
+                : (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v)
             }
           }
         }
@@ -4528,8 +4874,9 @@
           }
         },
         scales: {
-          x: { ticks: { font: { size: 10 } } },
-          y: { ticks: { font: { size: 10 } } }
+          // beginAtZero: ось денег всегда включает 0 (вертикальные — Y, горизонтальные — X)
+          x: { beginAtZero: true, ticks: { font: { size: 10 } } },
+          y: { beginAtZero: true, ticks: { font: { size: 10 } } }
         }
       };
     }
@@ -4828,13 +5175,18 @@
       list.innerHTML = items.map(tx => {
         const src = state.sources.find(s => s.id === tx.sourceId);
         const accIcon = accountEmoji(tx.account);
+        const reb = getReimbursementLabel(tx);
+        const title = reb
+          ? reb + (tx.note ? ' · ' + tx.note : '')
+          : ((src ? src.name : '—') + (tx.note ? ' · ' + tx.note : ''));
         return `<div class="tx-item">
           <div class="tx-icon income">+</div>
           <div class="tx-info">
-            <div class="tx-title">${src ? src.name : '—'}${tx.note ? ' · ' + tx.note : ''}</div>
-            <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}</div>
+            <div class="tx-title">${title}</div>
+            <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}${src && reb ? ' · ' + src.name : ''}</div>
           </div>
           <div class="tx-amount income">+${formatMoney(tx.amount)}</div>
+          <button class="tx-edit income-edit" data-id="${tx.id}" title="Изменить">✎</button>
           <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
         </div>`;
       }).join('');
@@ -4864,12 +5216,24 @@
       const before = around ? formatMoney(around.before) : '—';
       const after = around ? formatMoney(around.after) : '—';
       const acc = around ? accountLabel(around.account) : accountLabel(tx.account);
+      const rebAmt = getExpenseReimbursedAmount(tx.id);
+      const rebList = (state.transactions || [])
+        .filter(t => t.type === 'income' && t.reimbursement && t.reimbursement.mode === 'expense' && t.reimbursement.expenseId === tx.id)
+        .sort((a, b) => a.date.localeCompare(b.date));
+      let rebHtml = '';
+      if (rebList.length) {
+        rebHtml = `<div class="d-split">` + rebList.map(r =>
+          `<div class="d-row"><span>Возврат ${formatDate(r.date)}${r.note ? ' · ' + r.note : ''}</span><strong class="income">+${formatMoney(r.amount)}</strong></div>`
+        ).join('') +
+          `<div class="d-row"><span>Нетто расход</span><strong class="expense">−${formatMoney(getExpenseNetAmount(tx))}</strong></div></div>`;
+      }
       return `
         <div class="d-row"><span>Счёт</span><strong>${acc}</strong></div>
         <div class="d-row"><span>Баланс до</span><strong>${before}</strong></div>
         <div class="d-row"><span>Сумма</span><strong class="expense">−${formatMoney(tx.amount)}</strong></div>
         ${splitsHtml}
         ${allocHtml}
+        ${rebHtml}
         <div class="d-row"><span>Остаток после</span><strong>${after}</strong></div>
         <div class="d-row"><span>Заметка</span><strong>${tx.note ? tx.note : '—'}</strong></div>
       `;
@@ -4881,10 +5245,12 @@
       const before = around ? formatMoney(around.before) : '—';
       const after = around ? formatMoney(around.after) : '—';
       const acc = around ? accountLabel(around.account) : accountLabel(tx.account);
+      const reb = getReimbursementLabel(tx);
       return `
         <div class="d-row"><span>Счёт</span><strong>${acc}</strong></div>
         <div class="d-row"><span>Баланс до</span><strong>${before}</strong></div>
         <div class="d-row"><span>Источник</span><strong>${src ? src.name : '—'}</strong></div>
+        ${reb ? `<div class="d-row"><span>Возврат</span><strong>${reb}</strong></div>` : ''}
         <div class="d-row"><span>Сумма</span><strong class="income">+${formatMoney(tx.amount)}</strong></div>
         <div class="d-row"><span>Остаток после</span><strong>${after}</strong></div>
         <div class="d-row"><span>Заметка</span><strong>${tx.note ? tx.note : '—'}</strong></div>
@@ -4930,17 +5296,23 @@
         const allocNote = (tx.allocations && tx.allocations.length)
           ? ' · план ✓'
           : '';
+        const rebAmt = getExpenseReimbursedAmount(tx.id);
+        const rebNote = rebAmt > 0 ? ` · возврат ${formatMoney(rebAmt)}` : '';
         const err = tx.autopayStatus === 'error';
         const autoOk = tx.autopayId && !err;
         const statusNote = err ? ' · ⚠ ошибка автооплаты' : (autoOk ? ' · авто' : '');
+        const net = getExpenseNetAmount(tx);
+        const amountHtml = rebAmt > 0
+          ? `−${formatMoney(tx.amount)} <span style="font-size:0.75rem;opacity:0.75">(нетто ${formatMoney(net)})</span>`
+          : `−${formatMoney(tx.amount)}`;
         return `<div class="tx-wrap" data-tx-id="${tx.id}">
           <div class="tx-item clickable" data-expand="1">
             <div class="tx-icon expense">${err ? '!' : '−'}</div>
             <div class="tx-info">
-              <div class="tx-title">${splitsText}${tx.note ? ' · ' + tx.note : ''}${allocNote}${statusNote}</div>
+              <div class="tx-title">${splitsText}${tx.note ? ' · ' + tx.note : ''}${allocNote}${rebNote}${statusNote}</div>
               <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}</div>
             </div>
-            <div class="tx-amount expense" style="${err ? 'opacity:0.55;text-decoration:line-through' : ''}">−${formatMoney(tx.amount)}</div>
+            <div class="tx-amount expense" style="${err ? 'opacity:0.55;text-decoration:line-through' : ''}">${amountHtml}</div>
             ${err ? `<button class="tx-edit autopay-fix" data-id="${tx.id}" title="Погасить">✓</button>` : `<button class="tx-edit" data-id="${tx.id}" title="Изменить">✎</button>`}
             <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>
           </div>
@@ -5157,15 +5529,19 @@
             <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>`;
         } else if (tx.type === 'income') {
           const src = state.sources.find(s => s.id === tx.sourceId);
-          const title = (src ? src.name : '—') + (tx.note ? ' · ' + tx.note : '');
+          const reb = getReimbursementLabel(tx);
+          const title = reb
+            ? reb + (tx.note ? ' · ' + tx.note : '')
+            : ((src ? src.name : '—') + (tx.note ? ' · ' + tx.note : ''));
           const accIcon = accountEmoji(tx.account);
           rowInner = `
             <div class="tx-icon income">+</div>
             <div class="tx-info">
               <div class="tx-title">${title}</div>
-              <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}${tx.note ? ' · 📝' : ''}</div>
+              <div class="tx-meta">${formatDate(tx.date)} · ${accIcon} ${accountLabel(tx.account)}${src && reb ? ' · ' + src.name : ''}${tx.note ? ' · 📝' : ''}</div>
             </div>
             <div class="tx-amount income">+${formatMoney(tx.amount)}</div>
+            <button class="tx-edit income-edit" data-id="${tx.id}" title="Изменить">✎</button>
             <button class="tx-delete" data-id="${tx.id}" title="Удалить">×</button>`;
         } else {
           const splitsText = (tx.splits || []).map(sp =>
@@ -6370,34 +6746,92 @@
         renderAccountBalances();
       });
 
-      // Income add
+      document.getElementById('incomeReimburseEnable')?.addEventListener('change', e => {
+        setIncomeReimburseVisible(e.target.checked);
+      });
+      document.querySelectorAll('#reimburseModeTabs .period-tab').forEach(tab => {
+        tab.addEventListener('click', () => setReimburseMode(tab.dataset.reimburseMode));
+      });
+
+      document.getElementById('incomeReimburseExpense')?.addEventListener('change', e => {
+        fillReimburseSplitSelect(e.target.value);
+      });
+      document.getElementById('btnCancelIncomeEdit')?.addEventListener('click', () => {
+        resetIncomeForm();
+        toast('Редактирование отменено');
+      });
+
+      // Income add / edit
       document.getElementById('btnAddIncome').addEventListener('click', () => {
         const amount = parseFloat(document.getElementById('incomeAmount').value);
         const date = document.getElementById('incomeDate').value;
         const sourceId = document.getElementById('incomeSource').value;
         const note = document.getElementById('incomeNote').value.trim();
         const account = normalizeAccount(document.querySelector('input[name="incomeAccount"]:checked')?.value || 'visa');
+        const isReimburse = !!document.getElementById('incomeReimburseEnable')?.checked;
 
         if (!amount || amount <= 0) return toast('Введите сумму');
         if (!date) return toast('Укажите дату');
         if (!sourceId) return toast('Выберите источник');
 
+        let reimbursement = undefined;
+        if (isReimburse) {
+          const mode = document.querySelector('#reimburseModeTabs .period-tab.active')?.dataset.reimburseMode || 'expense';
+          if (mode === 'expense') {
+            const expenseId = document.getElementById('incomeReimburseExpense')?.value;
+            if (!expenseId) return toast('Выберите расход для возврата');
+            const splitCategoryId = document.getElementById('incomeReimburseSplit')?.value || undefined;
+            reimbursement = {
+              mode: 'expense',
+              expenseId,
+              splitCategoryId: splitCategoryId || undefined
+            };
+          } else {
+            const categoryId = document.getElementById('incomeReimburseCategory')?.value;
+            if (!categoryId) return toast('Выберите категорию для возврата');
+            reimbursement = { mode: 'category', categoryId };
+          }
+        }
+
+        if (editingIncomeId) {
+          const tx = state.transactions.find(t => t.id === editingIncomeId && t.type === 'income');
+          if (!tx) return toast('Доход не найден');
+          tx.amount = roundMoney(amount);
+          tx.date = date;
+          tx.sourceId = sourceId;
+          tx.account = account;
+          tx.note = note || undefined;
+          if (reimbursement) tx.reimbursement = reimbursement;
+          else delete tx.reimbursement;
+          saveState();
+          resetIncomeForm();
+          renderIncomeList();
+          renderAccountBalances();
+          renderHistory();
+          renderStats();
+          renderExpenseList();
+          toast(isReimburse ? 'Доход обновлён (возврат)' : 'Доход обновлён');
+          return;
+        }
+
         state.transactions.push({
           id: uid(),
           type: 'income',
-          amount,
+          amount: roundMoney(amount),
           date,
           sourceId,
           account,
-          note: note || undefined
+          note: note || undefined,
+          reimbursement
         });
         saveState();
-        document.getElementById('incomeAmount').value = '';
-        document.getElementById('incomeNote').value = '';
+        resetIncomeForm();
         renderIncomeList();
         renderAccountBalances();
         renderHistory();
-        toast('Доход добавлен');
+        renderStats();
+        renderExpenseList();
+        toast(isReimburse ? 'Возврат записан — расход уменьшен' : 'Доход добавлен');
       });
 
       // Expense amount change
@@ -6733,6 +7167,10 @@
             markAutopayPaid(btn.dataset.id);
             return;
           }
+          if (btn.classList.contains('income-edit')) {
+            startEditIncome(btn.dataset.id);
+            return;
+          }
           startEditExpense(btn.dataset.id);
           return;
         }
@@ -6742,6 +7180,7 @@
           if (confirm('Удалить эту запись?')) {
             state.transactions = state.transactions.filter(t => t.id !== id);
             if (editingExpenseId === id) resetExpenseForm();
+            if (editingIncomeId === id) resetIncomeForm();
             saveState();
             renderIncomeList();
             renderExpenseList();
