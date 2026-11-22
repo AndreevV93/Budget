@@ -291,30 +291,54 @@
     /* Period selector */
     .period-tabs {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       margin-bottom: 16px;
       flex-wrap: wrap;
     }
 
     .period-tab {
-      flex: 1;
-      min-width: 72px;
-      padding: 10px 10px;
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: 100%;
+      padding: 8px 6px;
       border: 2px solid var(--border);
       border-radius: 12px;
       background: white;
-      font-size: 0.85rem;
+      font-size: 0.78rem;
       font-weight: 500;
+      line-height: 1.2;
       color: var(--text-secondary);
       cursor: pointer;
       transition: all 0.2s;
       text-align: center;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      box-sizing: border-box;
+      font-family: inherit;
     }
 
     .period-tab.active {
       border-color: var(--primary);
       background: var(--primary-light);
       color: var(--primary-dark);
+    }
+
+    #historyTypeTabs .period-tab,
+    #historyPeriodTabs .period-tab,
+    #historyPageSizeTabs .period-tab {
+      flex: 1 1 calc(50% - 6px);
+      min-width: calc(50% - 6px);
+      font-size: 0.75rem;
+      padding: 9px 6px;
+    }
+
+    @media (min-width: 420px) {
+      #historyTypeTabs .period-tab,
+      #historyPeriodTabs .period-tab {
+        flex: 1 1 0;
+        min-width: 0;
+      }
     }
 
     .date-range {
@@ -382,11 +406,23 @@
       margin-top: 8px;
       line-height: 1.4;
     }
+    .heatmap-month {
+      margin-top: 14px;
+      padding: 12px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+    .heatmap-month-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
     .heatmap {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
       gap: 4px;
-      margin-top: 10px;
     }
     .heatmap-head {
       font-size: 0.65rem;
@@ -404,10 +440,26 @@
       justify-content: center;
       color: #64748B;
       min-height: 28px;
+      border: none;
+      padding: 0;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .heatmap-cell:disabled {
+      cursor: default;
+      opacity: 0.45;
+    }
+    .heatmap-cell.clickable:active {
+      transform: scale(0.94);
     }
     .heatmap-cell.has {
       color: #fff;
       font-weight: 600;
+    }
+    .heatmap-cell.out {
+      background: #F8FAFC !important;
+      color: #CBD5E1;
     }
     .heatmap-legend {
       display: flex;
@@ -423,6 +475,59 @@
       border-radius: 3px;
       display: inline-block;
     }
+    .heatmap-day-panel {
+      margin-top: 12px;
+      padding: 14px;
+      background: #FFFBEB;
+      border: 1.5px solid #FDE68A;
+      border-radius: 14px;
+    }
+    .heatmap-day-panel.hidden { display: none; }
+    .heatmap-day-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .heatmap-day-head strong { font-size: 0.95rem; }
+    .heatmap-day-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .heatmap-day-tabs button {
+      flex: 1;
+      min-width: 90px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background: #fff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: inherit;
+      color: var(--text-secondary);
+      cursor: pointer;
+    }
+    .heatmap-day-tabs button.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary-dark);
+    }
+    .heatmap-day-body {
+      font-size: 0.88rem;
+      color: var(--text);
+    }
+    .heatmap-day-body .stat-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #F5F5F4;
+    }
+    .heatmap-day-body .stat-line:last-child { border-bottom: none; }
+    .heatmap-day-body .muted { color: var(--text-secondary); font-size: 0.82rem; }
 
     .chart-legend {
       display: flex;
@@ -1789,6 +1894,7 @@
           <canvas id="curiousChart"></canvas>
         </div>
         <div id="curiousHeatmap" class="hidden"></div>
+        <div id="heatmapDayPanel" class="heatmap-day-panel hidden"></div>
         <div class="curious-hint" id="curiousHint"></div>
         <div class="empty-state hidden" id="curiousEmpty">Недостаточно данных за период</div>
       </div>
@@ -4881,70 +4987,179 @@
       };
     }
 
+    let heatmapDayData = {};
+    let heatmapSelectedDay = null;
+    let heatmapDayView = 'summary';
+
+    const MONTH_NAMES_RU = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+
     function renderCuriousHeatmap(rangeFrom, rangeTo, expenses, hintEl) {
       destroyCuriousChart();
       document.getElementById('curiousChartWrap').classList.add('hidden');
       const heat = document.getElementById('curiousHeatmap');
       heat.classList.remove('hidden');
       document.getElementById('curiousEmpty').classList.add('hidden');
+      const dayPanel = document.getElementById('heatmapDayPanel');
+      if (dayPanel) {
+        dayPanel.classList.add('hidden');
+        dayPanel.innerHTML = '';
+      }
+      heatmapSelectedDay = null;
+      heatmapDayView = 'summary';
 
       const byDay = {};
       expenses.forEach(tx => {
-        byDay[tx.date] = (byDay[tx.date] || 0) + tx.amount;
+        if (tx.autopayStatus === 'error') return;
+        if (!byDay[tx.date]) byDay[tx.date] = { sum: 0, count: 0, txs: [] };
+        byDay[tx.date].sum = roundMoney(byDay[tx.date].sum + tx.amount);
+        byDay[tx.date].count += 1;
+        byDay[tx.date].txs.push(tx);
       });
-      const amounts = Object.values(byDay);
+      heatmapDayData = byDay;
+      const amounts = Object.values(byDay).map(d => d.sum);
       const max = amounts.length ? Math.max(...amounts) : 0;
 
-      const start = new Date(rangeFrom + 'T12:00:00');
-      start.setDate(1);
-      const end = new Date(rangeTo + 'T12:00:00');
-      end.setMonth(end.getMonth() + 1);
-      end.setDate(0);
+      // список месяцев в диапазоне
+      const months = [];
+      let ym = rangeFrom.slice(0, 7);
+      const endYm = rangeTo.slice(0, 7);
+      while (ym <= endYm) {
+        months.push(ym);
+        const [y, m] = ym.split('-').map(Number);
+        const next = m === 12 ? (y + 1) + '-01' : y + '-' + String(m + 1).padStart(2, '0');
+        ym = next;
+      }
 
-      // limit heatmap to period months but only color days in range
       const heads = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-      let html = heads.map(h => `<div class="heatmap-head">${h}</div>`).join('');
+      let monthsHtml = '';
 
-      // start from Monday of first week
-      const d0 = new Date(start);
-      const wd = (d0.getDay() + 6) % 7; // mon=0
-      d0.setDate(d0.getDate() - wd);
+      months.forEach(monthKey => {
+        const [yy, mm] = monthKey.split('-').map(Number);
+        const title = MONTH_NAMES_RU[mm - 1] + ' ' + yy;
+        const first = new Date(yy, mm - 1, 1, 12, 0, 0);
+        const lastDay = new Date(yy, mm, 0, 12, 0, 0).getDate();
+        const startPad = (first.getDay() + 6) % 7; // mon=0
 
-      const endShow = new Date(end);
-      const cells = [];
-      for (let i = 0; i < 42 * 3; i++) {
-        const iso = d0.toISOString().slice(0, 10);
-        if (d0 > endShow && (d0.getDay() + 6) % 7 === 0 && i > 7) break;
-        const inRange = iso >= rangeFrom && iso <= rangeTo;
-        const val = byDay[iso] || 0;
-        let bg = '#F1F5F9';
-        let cls = 'heatmap-cell';
-        if (inRange && val > 0 && max > 0) {
-          const t = val / max;
-          const alpha = 0.25 + t * 0.75;
-          bg = `rgba(220, 38, 38, ${alpha.toFixed(2)})`;
-          cls += ' has';
-        } else if (!inRange) {
-          bg = '#F8FAFC';
+        let cells = heads.map(h => '<div class="heatmap-head">' + h + '</div>').join('');
+        for (let i = 0; i < startPad; i++) {
+          cells += '<button type="button" class="heatmap-cell out" disabled></button>';
         }
-        const dayNum = d0.getDate();
-        cells.push(`<div class="${cls}" style="background:${bg}" title="${iso}: ${formatMoney(val)}">${dayNum}</div>`);
-        d0.setDate(d0.getDate() + 1);
-        if (cells.length > 100) break;
+        for (let day = 1; day <= lastDay; day++) {
+          const iso = yy + '-' + String(mm).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+          const inRange = iso >= rangeFrom && iso <= rangeTo;
+          const info = byDay[iso];
+          const val = info ? info.sum : 0;
+          let bg = '#F1F5F9';
+          let cls = 'heatmap-cell';
+          if (!inRange) {
+            cls += ' out';
+            cells += '<button type="button" class="' + cls + '" style="background:#F8FAFC" disabled>' + day + '</button>';
+            continue;
+          }
+          cls += ' clickable';
+          if (val > 0 && max > 0) {
+            const t = val / max;
+            const alpha = (0.25 + t * 0.75).toFixed(2);
+            bg = 'rgba(220, 38, 38, ' + alpha + ')';
+            cls += ' has';
+          }
+          cells += '<button type="button" class="' + cls + '" style="background:' + bg + '" data-heat-day="' + iso + '" title="' + iso + ': ' + formatMoney(val) + '">' + day + '</button>';
+        }
+        // pad end of week
+        const totalCells = startPad + lastDay;
+        const endPad = (7 - (totalCells % 7)) % 7;
+        for (let i = 0; i < endPad; i++) {
+          cells += '<button type="button" class="heatmap-cell out" disabled></button>';
+        }
+
+        monthsHtml += '<div class="heatmap-month"><div class="heatmap-month-title">' + title + '</div><div class="heatmap">' + cells + '</div></div>';
+      });
+
+      heat.innerHTML = monthsHtml +
+        '<div class="heatmap-legend">' +
+        '<span>Меньше</span>' +
+        '<span class="box" style="background:#FECACA"></span>' +
+        '<span class="box" style="background:#F87171"></span>' +
+        '<span class="box" style="background:#DC2626"></span>' +
+        '<span>Больше</span></div>';
+
+      if (hintEl) {
+        hintEl.textContent = amounts.length
+          ? 'Календарь по месяцам. Нажмите на день — сводка, категории или список операций.'
+          : 'Нет расходов за период — календарь пустой. Дни всё равно можно открыть.';
       }
-      heat.innerHTML = `<div class="heatmap">${html}${cells.join('')}</div>
-        <div class="heatmap-legend">
-          <span>Меньше</span>
-          <span class="box" style="background:#FECACA"></span>
-          <span class="box" style="background:#F87171"></span>
-          <span class="box" style="background:#DC2626"></span>
-          <span>Больше</span>
-        </div>`;
-      if (hintEl) hintEl.textContent = 'Интенсивность цвета — сумма трат за день. Наведите на клетку для суммы.';
-      if (!amounts.length) {
-        // still show calendar but hint
-        if (hintEl) hintEl.textContent = 'Нет расходов за период — календарь пустой.';
+    }
+
+    function openHeatmapDayPanel(iso) {
+      heatmapSelectedDay = iso;
+      heatmapDayView = 'summary';
+      const panel = document.getElementById('heatmapDayPanel');
+      if (!panel) return;
+      panel.classList.remove('hidden');
+      renderHeatmapDayPanel();
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function renderHeatmapDayPanel() {
+      const panel = document.getElementById('heatmapDayPanel');
+      if (!panel || !heatmapSelectedDay) return;
+      const iso = heatmapSelectedDay;
+      const info = heatmapDayData[iso] || { sum: 0, count: 0, txs: [] };
+      const tabs = [
+        { id: 'summary', label: 'Сводка' },
+        { id: 'categories', label: 'Категории' },
+        { id: 'ops', label: 'Операции' }
+      ];
+      let body = '';
+      if (heatmapDayView === 'summary') {
+        const avg = info.count ? roundMoney(info.sum / info.count) : 0;
+        body =
+          '<div class="stat-line"><span>Дата</span><strong>' + formatDate(iso) + '</strong></div>' +
+          '<div class="stat-line"><span>Число операций</span><strong>' + info.count + '</strong></div>' +
+          '<div class="stat-line"><span>Сумма трат</span><strong class="expense">−' + formatMoney(info.sum) + '</strong></div>' +
+          '<div class="stat-line"><span>Средний чек</span><strong>' + formatMoney(avg) + '</strong></div>';
+        if (!info.count) body += '<p class="muted" style="margin-top:8px">В этот день расходов нет</p>';
+      } else if (heatmapDayView === 'categories') {
+        if (!info.txs.length) {
+          body = '<p class="muted">Нет операций</p>';
+        } else {
+          const byCat = {};
+          info.txs.forEach(tx => {
+            const splits = (tx.splits && tx.splits.length) ? tx.splits : [{ categoryId: '_none', amount: tx.amount }];
+            splits.forEach(sp => {
+              const id = sp.categoryId || '_none';
+              byCat[id] = (byCat[id] || 0) + (Number(sp.amount) || 0);
+            });
+          });
+          body = Object.entries(byCat)
+            .sort((a, b) => b[1] - a[1])
+            .map(([id, sum]) => {
+              const name = id === '_none' ? 'Без категории' : getCategoryLabel(id);
+              const pct = info.sum > 0 ? Math.round((sum / info.sum) * 100) : 0;
+              return '<div class="stat-line"><span>' + name + ' <span class="muted">' + pct + '%</span></span><strong>−' + formatMoney(sum) + '</strong></div>';
+            }).join('');
+        }
+      } else {
+        if (!info.txs.length) {
+          body = '<p class="muted">Нет операций</p>';
+        } else {
+          body = info.txs.slice().sort((a, b) => (b.id || '').localeCompare(a.id || '')).map(tx => {
+            const cats = (tx.splits || []).map(sp => getCategoryLabel(sp.categoryId)).join(', ') || '—';
+            const note = tx.note ? ' · ' + tx.note : '';
+            return '<div class="stat-line"><span>' + cats + note + '<br><span class="muted">' + accountLabel(tx.account) + '</span></span><strong class="expense">−' + formatMoney(tx.amount) + '</strong></div>';
+          }).join('');
+        }
       }
+
+      panel.innerHTML =
+        '<div class="heatmap-day-head">' +
+          '<strong>' + formatDate(iso) + '</strong>' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="heatmapDayClose">Закрыть</button>' +
+        '</div>' +
+        '<div class="heatmap-day-tabs">' +
+          tabs.map(t => '<button type="button" data-heat-view="' + t.id + '" class="' + (heatmapDayView === t.id ? 'active' : '') + '">' + t.label + '</button>').join('') +
+        '</div>' +
+        '<div class="heatmap-day-body">' + body + '</div>';
     }
 
     function renderPie(canvasId, labels, data, colors, type) {
@@ -6577,6 +6792,29 @@
         if (!head) return;
         const card = head.closest('.collapsible-card');
         if (card) card.classList.toggle('collapsed');
+      });
+
+      // Календарь трат — клик по дню
+      document.addEventListener('click', e => {
+        const dayBtn = e.target.closest('[data-heat-day]');
+        if (dayBtn) {
+          openHeatmapDayPanel(dayBtn.dataset.heatDay);
+          return;
+        }
+        if (e.target.id === 'heatmapDayClose' || e.target.closest('#heatmapDayClose')) {
+          const panel = document.getElementById('heatmapDayPanel');
+          if (panel) {
+            panel.classList.add('hidden');
+            panel.innerHTML = '';
+          }
+          heatmapSelectedDay = null;
+          return;
+        }
+        const viewBtn = e.target.closest('[data-heat-view]');
+        if (viewBtn && heatmapSelectedDay) {
+          heatmapDayView = viewBtn.dataset.heatView;
+          renderHeatmapDayPanel();
+        }
       });
 
       // Period (только вкладки периода на статистике)
