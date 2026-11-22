@@ -475,14 +475,20 @@
       border-radius: 3px;
       display: inline-block;
     }
-    .heatmap-day-panel {
-      margin-top: 12px;
-      padding: 14px;
-      background: #FFFBEB;
-      border: 1.5px solid #FDE68A;
-      border-radius: 14px;
+    #heatmapDayModal.modal-overlay {
+      z-index: 220;
+      align-items: center;
+      padding: 16px;
     }
-    .heatmap-day-panel.hidden { display: none; }
+    #heatmapDayModal .modal {
+      border-radius: 18px;
+      max-height: 80vh;
+      animation: fadeScale 0.2s ease;
+    }
+    @keyframes fadeScale {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
     .heatmap-day-head {
       display: flex;
       justify-content: space-between;
@@ -490,7 +496,7 @@
       gap: 8px;
       margin-bottom: 10px;
     }
-    .heatmap-day-head strong { font-size: 0.95rem; }
+    .heatmap-day-head strong { font-size: 1.05rem; }
     .heatmap-day-tabs {
       display: flex;
       flex-wrap: wrap;
@@ -1894,7 +1900,6 @@
           <canvas id="curiousChart"></canvas>
         </div>
         <div id="curiousHeatmap" class="hidden"></div>
-        <div id="heatmapDayPanel" class="heatmap-day-panel hidden"></div>
         <div class="curious-hint" id="curiousHint"></div>
         <div class="empty-state hidden" id="curiousEmpty">Недостаточно данных за период</div>
       </div>
@@ -2474,6 +2479,12 @@
         <span>Долговых обязательств больше нет (полное закрытие, даже если сумма другая)</span>
       </label>
       <button class="btn btn-primary" id="btnDebtRepaySave" style="width:100%">Сохранить</button>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="heatmapDayModal">
+    <div class="modal" id="heatmapDayPanel" role="dialog" aria-modal="true">
+      <!-- заполняется JS -->
     </div>
   </div>
 
@@ -4999,12 +5010,7 @@
       const heat = document.getElementById('curiousHeatmap');
       heat.classList.remove('hidden');
       document.getElementById('curiousEmpty').classList.add('hidden');
-      const dayPanel = document.getElementById('heatmapDayPanel');
-      if (dayPanel) {
-        dayPanel.classList.add('hidden');
-        dayPanel.innerHTML = '';
-      }
-      heatmapSelectedDay = null;
+      closeHeatmapDayPanel();
       heatmapDayView = 'summary';
 
       const byDay = {};
@@ -5090,14 +5096,21 @@
       }
     }
 
+    function closeHeatmapDayPanel() {
+      heatmapSelectedDay = null;
+      const modal = document.getElementById('heatmapDayModal');
+      const panel = document.getElementById('heatmapDayPanel');
+      if (modal) modal.classList.remove('show');
+      if (panel) panel.innerHTML = '';
+    }
+
     function openHeatmapDayPanel(iso) {
       heatmapSelectedDay = iso;
       heatmapDayView = 'summary';
-      const panel = document.getElementById('heatmapDayPanel');
-      if (!panel) return;
-      panel.classList.remove('hidden');
+      const modal = document.getElementById('heatmapDayModal');
+      if (!modal) return;
       renderHeatmapDayPanel();
-      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      modal.classList.add('show');
     }
 
     function renderHeatmapDayPanel() {
@@ -6802,12 +6815,11 @@
           return;
         }
         if (e.target.id === 'heatmapDayClose' || e.target.closest('#heatmapDayClose')) {
-          const panel = document.getElementById('heatmapDayPanel');
-          if (panel) {
-            panel.classList.add('hidden');
-            panel.innerHTML = '';
-          }
-          heatmapSelectedDay = null;
+          closeHeatmapDayPanel();
+          return;
+        }
+        if (e.target.id === 'heatmapDayModal') {
+          closeHeatmapDayPanel();
           return;
         }
         const viewBtn = e.target.closest('[data-heat-view]');
